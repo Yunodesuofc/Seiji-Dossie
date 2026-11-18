@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dossiê Clínico — Seiji | Elite Médico</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Cinzel & Cormorant Garamond (Editorial/Botânico) + Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Paleta Modo Normal: Herbário Jade & Pergaminho Escuro */
+      --bg-primary: #09120f;
+      --bg-secondary: #101e19;
+      --bg-card: rgba(18, 33, 28, 0.85);
+      --border-accent: rgba(200, 169, 110, 0.35);
+      --border-strong: #c8a96e;
+      --gold: #c8a96e;
+      --gold-light: #e6cfa3;
+      --jade: #388e6c;
+      --jade-glow: rgba(56, 142, 108, 0.25);
+      --text-main: #e6ece8;
+      --text-muted: #98aba2;
+      --crimson-secret: #9e1b32;
+    }
+
+    body.demon-mode {
+      /* Paleta Modo Demônio: Coroa-de-Espinhos & Sangue */
+      --bg-primary: #0a0406;
+      --bg-secondary: #14070b;
+      --bg-card: rgba(24, 9, 14, 0.9);
+      --border-accent: rgba(184, 29, 58, 0.45);
+      --border-strong: #c92a46;
+      --gold: #d9415d;
+      --gold-light: #ff8fa3;
+      --jade: #4a7c38;
+      --jade-glow: rgba(184, 29, 58, 0.3);
+      --text-main: #f3e6e8;
+      --text-muted: #b5949a;
+    }
+
+    * {
+      box-sizing: border-box;
+      transition: background-color 0.6s ease, border-color 0.6s ease, color 0.4s ease, box-shadow 0.6s ease;
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    .font-display {
+      font-family: 'Cinzel', serif;
+    }
+
+    .font-serif-literary {
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    /* Canvas de Partículas ao Fundo */
+    #ambient-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Vinhas e Espinhos nas Bordas (Modo Demônio) */
+    .thorn-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 40;
+      opacity: 0;
+      transition: opacity 0.9s ease;
+      box-shadow: inset 0 0 90px rgba(158, 27, 50, 0.45);
+    }
+
+    body.demon-mode .thorn-overlay {
+      opacity: 1;
+    }
+
+    /* Estilo do Pergaminho do Prólogo */
+    .parchment-box {
+      background: linear-gradient(145deg, rgba(20, 34, 29, 0.96), rgba(11, 20, 17, 0.98));
+      border: 1px solid rgba(200, 169, 110, 0.4);
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), inset 0 0 40px rgba(200, 169, 110, 0.05);
+      position: relative;
+    }
+
+    .parchment-box::before {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border: 1px solid rgba(200, 169, 110, 0.18);
+      pointer-events: none;
+      border-radius: 0.75rem;
+    }
+
+    /* Texto Rasurado / Oculto no Prólogo */
+    .redacted-ink {
+      background: rgba(158, 27, 50, 0.28);
+      color: transparent;
+      text-shadow: 0 0 9px rgba(224, 62, 92, 0.85);
+      border-bottom: 1px dashed rgba(224, 62, 92, 0.6);
+      padding: 0 6px;
+      border-radius: 4px;
+      cursor: help;
+      user-select: none;
+      transition: all 0.4s ease;
+    }
+
+    .redacted-ink:hover,
+    .redacted-ink.revealed {
+      background: rgba(158, 27, 50, 0.18);
+      color: #ff9eb0;
+      text-shadow: 0 0 8px rgba(255, 77, 109, 0.4);
+    }
+
+    /* Transição Suave da Nota Adicional e do Botão Final */
+    .smooth-reveal {
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1), transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .smooth-reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Cursor piscando na máquina de escrever */
+    .typing-cursor::after {
+      content: '▋';
+      color: var(--gold);
+      animation: blink 0.9s infinite;
+      margin-left: 3px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
+    /* Efeito de Tremor/Glitch nos cliques da Espécie */
+    @keyframes shake-mild {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px) rotate(-0.5deg); }
+      75% { transform: translateX(3px) rotate(0.5deg); }
+    }
+
+    @keyframes shake-intense {
+      0%, 100% { transform: translate(0, 0); }
+      20% { transform: translate(-5px, 2px); }
+      40% { transform: translate(5px, -2px); }
+      60% { transform: translate(-4px, -1px); }
+      80% { transform: translate(4px, 2px); }
+    }
+
+    .shake-1 { animation: shake-mild 0.35s ease; }
+    .shake-2 { animation: shake-intense 0.45s ease; }
+
+    /* Cards & Glassmorphism */
+    .clinic-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .clinic-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    /* Botão de Aba Ativa */
+    .tab-btn {
+      position: relative;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--gold-light);
+    }
+
+    .tab-btn.active {
+      color: var(--gold-light);
+      background: rgba(200, 169, 110, 0.12);
+      border-color: var(--border-strong);
+    }
+
+    body.demon-mode .tab-btn.active {
+      background: rgba(201, 42, 70, 0.18);
+    }
+
+    /* Banner Panorâmico Responsivo */
+    .banner-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 21 / 9;
+      min-height: 220px;
+      max-height: 400px;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    @media (max-width: 640px) {
+      .banner-container {
+        aspect-ratio: 16 / 9;
+        min-height: 190px;
+      }
+    }
+
+    .banner-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 22%;
+      transition: transform 0.8s ease, filter 0.6s ease, opacity 0.6s ease;
+    }
+
+    .banner-container:hover .banner-img {
+      transform: scale(1.03);
+    }
+
+    /* Avatar Circular Recortado da Mesma Arte */
+    .avatar-ring {
+      width: 124px;
+      height: 124px;
+      border-radius: 9999px;
+      border: 3px solid var(--border-strong);
+      box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), 0 0 18px var(--jade-glow);
+      overflow: hidden;
+      background: var(--bg-secondary);
+      position: relative;
+    }
+
+    @media (max-width: 640px) {
+      .avatar-ring {
+        width: 96px;
+        height: 96px;
+      }
+    }
+
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 15%;
+      transform: scale(1.45);
+      transform-origin: center 18%;
+    }
+
+    /* Pulso discreto na dica da espécie */
+    .secret-species-trigger {
+      cursor: pointer;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px dashed rgba(200, 169, 110, 0.35);
+      transition: all 0.25s ease;
+    }
+
+    .secret-species-trigger:hover {
+      border-color: #c92a46;
+      background: rgba(158, 27, 50, 0.12);
+    }
+
+    /* ===================================================================== */
+    /* ANIMAÇÃO DE APAGÃO & DESPERTAR DEMONÍACO (COROA-DE-ESPINHOS)          */
+    /* ===================================================================== */
+    body.fainting-effect #main-dossier {
+      filter: blur(5px) grayscale(0.75) brightness(0.45);
+      transform: scale(0.985);
+      transition: filter 1.8s ease-in, transform 1.8s ease-in;
+    }
+
+    #awakening-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 70;
+      background: radial-gradient(circle at center, rgba(16, 4, 8, 0.96) 0%, #030102 75%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #awakening-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Pálpebras superiores e inferiores fechando na perda de consciência */
+    .eyelid-top,
+    .eyelid-bottom {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 52%;
+      background: #020101;
+      z-index: 2;
+      transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .eyelid-top {
+      top: 0;
+      transform: translateY(-102%);
+      box-shadow: 0 25px 50px #020101;
+    }
+
+    .eyelid-bottom {
+      bottom: 0;
+      transform: translateY(102%);
+      box-shadow: 0 -25px 50px #020101;
+    }
+
+    #awakening-overlay.eyelids-closed .eyelid-top,
+    #awakening-overlay.eyelids-closed .eyelid-bottom {
+      transform: translateY(0%);
+    }
+
+    #awakening-overlay.eyelids-reopen .eyelid-top {
+      transform: translateY(-102%);
+      transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #awakening-overlay.eyelids-reopen .eyelid-bottom {
+      transform: translateY(102%);
+      transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* Traçado animado dos galhos de Coroa-de-Espinhos */
+    .thorn-branch-path {
+      stroke-dasharray: 1200;
+      stroke-dashoffset: 1200;
+      transition: stroke-dashoffset 2.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #awakening-overlay.grow-thorns .thorn-branch-path {
+      stroke-dashoffset: 0;
+    }
+
+    .thorn-flower-bloom {
+      opacity: 0;
+      transform: scale(0.2);
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #awakening-overlay.bloom-flowers .thorn-flower-bloom {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Olho Demoníaco Chartreuse abrindo no centro */
+    .demon-eye-wrapper {
+      opacity: 0;
+      transform: scaleY(0.04) scaleX(0.85);
+      transition: opacity 0.8s ease, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #awakening-overlay.open-demon-eye .demon-eye-wrapper {
+      opacity: 1;
+      transform: scaleY(1) scaleX(1);
+    }
+
+    @keyframes iris-pulse {
+      0%, 100% { filter: drop-shadow(0 0 14px rgba(190, 242, 100, 0.65)); }
+      50% { filter: drop-shadow(0 0 26px rgba(217, 249, 157, 0.95)); }
+    }
+
+    .demon-eye-glow {
+      animation: iris-pulse 2.4s infinite ease-in-out;
+    }
+
+    /* Pulso Carmesim Final */
+    #crimson-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      background: radial-gradient(circle at center, rgba(225, 29, 72, 0.85), rgba(136, 19, 55, 0.95));
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.55s ease-out;
+    }
+
+    #crimson-flash.flash-in {
+      opacity: 1;
+    }
+
+    /* ===================================================================== */
+    /* ANIMAÇÃO DAS PORTAS SHŌJI DO HERBÁRIO & ENTRADA EM CASCATA             */
+    /* ===================================================================== */
+    .shoji-door {
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(200, 169, 110, 0.14) 0px,
+          rgba(200, 169, 110, 0.14) 2px,
+          transparent 2px,
+          transparent 84px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          rgba(200, 169, 110, 0.14) 0px,
+          rgba(200, 169, 110, 0.14) 2px,
+          transparent 2px,
+          transparent 84px
+        ),
+        radial-gradient(circle at center, rgba(28, 58, 46, 0.96) 0%, rgba(10, 22, 17, 0.99) 85%);
+      border-top: 8px solid #182b23;
+      border-bottom: 8px solid #182b23;
+      box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 0, 0, 0.85);
+      transition: transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #shoji-left {
+      border-right: 6px solid #233d32;
+      box-shadow: inset -4px 0 0 rgba(200, 169, 110, 0.45), inset 0 0 80px rgba(0, 0, 0, 0.9);
+      transform: translateX(-102%);
+    }
+
+    #shoji-right {
+      border-left: 6px solid #233d32;
+      box-shadow: inset 4px 0 0 rgba(200, 169, 110, 0.45), inset 0 0 80px rgba(0, 0, 0, 0.9);
+      transform: translateX(102%);
+    }
+
+    #shoji-transition.doors-closed #shoji-left,
+    #shoji-transition.doors-closed #shoji-right {
+      transform: translateX(0%);
+    }
+
+    .shoji-lattice-panel {
+      background-image:
+        linear-gradient(to right, rgba(200, 169, 110, 0.28) 2px, transparent 2px),
+        linear-gradient(to bottom, rgba(200, 169, 110, 0.28) 2px, transparent 2px);
+      background-size: 25% 20%;
+      border: 3px solid rgba(200, 169, 110, 0.45);
+      box-shadow: inset 0 0 45px rgba(56, 142, 108, 0.16);
+    }
+
+    .apothecary-seal {
+      opacity: 0;
+      transform: scale(0.55) rotate(-45deg);
+      transition: opacity 0.6s ease, transform 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #shoji-transition.seal-active .apothecary-seal {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .seal-half-left,
+    .seal-half-right {
+      transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.75s ease;
+    }
+
+    #shoji-transition.seal-broken .seal-half-left {
+      transform: translate(-52px, -14px) rotate(-18deg);
+      opacity: 0;
+    }
+
+    #shoji-transition.seal-broken .seal-half-right {
+      transform: translate(52px, 14px) rotate(18deg);
+      opacity: 0;
+    }
+
+    .seal-spark {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 9999px;
+      background: radial-gradient(circle, #fef08a 0%, #c8a96e 70%, transparent 100%);
+      box-shadow: 0 0 10px #e6cfa3;
+      pointer-events: none;
+      animation: sparkBurst 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes sparkBurst {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) scale(0.2);
+      }
+    }
+
+    .cascade-item {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .cascade-item.cascade-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===================================================================== */
+    /* EFEITO "GERMINAÇÃO CARMESIM" (LETRA POR LETRA ORGÂNICO DA ENTIDADE)   */
+    /* ===================================================================== */
+    @keyframes sproutLetter {
+      0% {
+        opacity: 0;
+        transform: scale(0.35) translateY(5px);
+        filter: blur(4px);
+        text-shadow: 0 0 14px #f43f5e, 0 0 24px #bef264;
+        color: #ff8fa3;
+      }
+      65% {
+        opacity: 1;
+        transform: scale(1.06) translateY(-1px);
+        filter: blur(0px);
+        text-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        filter: blur(0px);
+        text-shadow: none;
+      }
+    }
+
+    .sprout-char {
+      display: inline-block;
+      white-space: pre-wrap;
+      animation: sproutLetter 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* ===================================================================== */
+    /* SISTEMA PROGRESSIVO DE IRRITAÇÃO (PERTURBAR O AVATAR / BANNER)        */
+    /* ===================================================================== */
+    .avatar-ring,
+    .banner-container {
+      cursor: pointer;
+    }
+
+    /* Nível 2+: Espinhos brotando ao redor do Avatar */
+    .avatar-thorns-svg {
+      position: absolute;
+      inset: -14px;
+      width: calc(100% + 28px);
+      height: calc(100% + 28px);
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.8) rotate(-15deg);
+      transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 15;
+    }
+
+    .avatar-wrapper.annoy-lv2 .avatar-thorns-svg,
+    .avatar-wrapper.annoy-lv3 .avatar-thorns-svg,
+    .avatar-wrapper.annoy-lv4 .avatar-thorns-svg {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .avatar-wrapper.annoy-lv2 .avatar-ring {
+      border-color: #e11d48;
+      box-shadow: 0 0 28px rgba(225, 29, 72, 0.65);
+    }
+
+    /* Nível 3: Névoa Tóxica nas bordas da tela */
+    #annoyance-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 55;
+      opacity: 0;
+      background: radial-gradient(circle at center, transparent 48%, rgba(136, 19, 55, 0.55) 82%, rgba(26, 46, 5, 0.85) 100%);
+      transition: opacity 0.6s ease;
+    }
+
+    #annoyance-vignette.active {
+      opacity: 1;
+    }
+
+    /* Balão de Fala da Entidade no canto */
+    #entity-whisper-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 65;
+      max-width: 360px;
+      background: linear-gradient(145deg, rgba(22, 6, 11, 0.96), rgba(10, 3, 6, 0.98));
+      border: 1px solid rgba(225, 29, 72, 0.65);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(190, 242, 100, 0.15);
+      transform: translateY(24px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    #entity-whisper-toast.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Nível 4: Punição da Poda (Chicote de Espinhos + Trava de Tela) */
+    #pruning-punishment-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 85;
+      background: rgba(6, 2, 4, 0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    #pruning-punishment-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .whip-slash-path {
+      stroke-dasharray: 1600;
+      stroke-dashoffset: 1600;
+      transition: stroke-dashoffset 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #pruning-punishment-overlay.active .whip-slash-path {
+      stroke-dashoffset: 0;
+    }
+
+    /* Esconder scrollbar mantendo scroll */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-800 selection:text-amber-100">
+
+  <!-- Canvas de Partículas Atmosféricas -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Névoa Tóxica de Irritação (Nível 3+) -->
+  <div id="annoyance-vignette" aria-hidden="true"></div>
+
+  <!-- Balão de Aviso da Entidade ao Perturbar o Seiji -->
+  <div id="entity-whisper-toast" class="rounded-2xl p-4 text-left" role="status" aria-live="polite">
+    <div class="flex items-center gap-2.5 mb-1.5">
+      <span class="w-2.5 h-2.5 rounded-full bg-lime-400 shadow-[0_0_8px_#bef264] animate-pulse"></span>
+      <span id="whisper-level-label" class="font-display text-[11px] font-bold uppercase tracking-widest text-rose-400">
+        Presença Oculta • Aviso
+      </span>
+    </div>
+    <p id="whisper-text" class="font-serif-literary italic text-base sm:text-lg text-rose-100 leading-snug"></p>
+  </div>
+
+  <!-- Overlay de Punição da Poda (Nível 4 de Irritação — Bloqueio Temporário) -->
+  <div id="pruning-punishment-overlay" aria-hidden="true">
+    <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1440 900" preserveAspectRatio="none">
+      <!-- Chicote diagonal de Coroa-de-Espinhos cortando a tela -->
+      <path class="whip-slash-path" d="M-40,860 C340,620 690,460 1480,40" fill="none" stroke="#9f1239" stroke-width="10" stroke-linecap="round" />
+      <path class="whip-slash-path" d="M-40,860 C340,620 690,460 1480,40" fill="none" stroke="#f43f5e" stroke-width="3" stroke-dasharray="18 10" />
+      <path class="whip-slash-path" d="M120,-30 C490,320 920,580 1360,930" fill="none" stroke="#4d7c0f" stroke-width="6" stroke-linecap="round" />
+    </svg>
+
+    <div class="relative z-10 flex flex-col items-center text-center px-6 max-w-lg">
+      <!-- Olho Chartreuse encarando fixamente -->
+      <svg class="w-40 h-20 mb-5 demon-eye-glow" viewBox="0 0 240 120">
+        <path d="M8,60 Q120,-16 232,60 Q120,136 8,60 Z" fill="#090305" stroke="#e11d48" stroke-width="3" />
+        <circle cx="120" cy="60" r="38" fill="#bef264" />
+        <ellipse cx="120" cy="60" rx="5" ry="32" fill="#050203" />
+        <circle cx="107" cy="46" r="4.5" fill="#ffffff" />
+      </svg>
+      <span class="text-xs uppercase tracking-[0.28em] text-rose-400 font-bold mb-2">Punição da Poda • Acesso Bloqueado</span>
+      <p id="punishment-text" class="font-serif-literary italic text-2xl sm:text-3xl text-rose-100 mb-4"></p>
+      <span id="punishment-timer" class="text-xs font-mono text-lime-300/80 border border-lime-400/30 px-3 py-1 rounded-full">
+        Aguarde 4s...
+      </span>
+    </div>
+  </div>
+
+  <!-- Vinheta & Espinhos Decorativos no Modo Demônio -->
+  <div class="thorn-overlay" aria-hidden="true">
+    <svg class="w-full h-full opacity-45" viewBox="0 0 1440 900" preserveAspectRatio="none">
+      <path d="M0,0 Q180,90 320,20 T600,40 M1440,0 Q1250,110 1080,30 T820,50 M0,900 Q210,800 390,870 T710,850 M1440,900 Q1220,790 1020,860 T730,840" 
+            fill="none" stroke="#9e1b32" stroke-width="3" stroke-dasharray="12 6" />
+      <!-- Pequenos espinhos estilizados nos cantos -->
+      <polygon points="40,18 52,35 32,28" fill="#c92a46" />
+      <polygon points="140,52 155,70 132,62" fill="#c92a46" />
+      <polygon points="1390,22 1375,40 1398,32" fill="#c92a46" />
+      <polygon points="1290,62 1275,80 1300,72" fill="#c92a46" />
+    </svg>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- OVERLAY DE APAGÃO & DESPERTAR DEMONÍACO (COROA-DE-ESPINHOS)           -->
+  <!-- ===================================================================== -->
+  <div id="awakening-overlay" aria-hidden="true">
+    <!-- Pálpebras simulando a perda de consciência do Seiji -->
+    <div class="eyelid-top"></div>
+    <div class="eyelid-bottom"></div>
+
+    <!-- Galhos de Coroa-de-Espinhos e Flores Carmesim crescendo pelas bordas -->
+    <svg class="absolute inset-0 w-full h-full z-10 pointer-events-none" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="crimsonGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+
+      <!-- Galhos principais -->
+      <path class="thorn-branch-path" d="M-20,120 C180,140 290,260 470,220 C610,190 670,90 790,130" fill="none" stroke="#2d4a22" stroke-width="5" stroke-linecap="round" />
+      <path class="thorn-branch-path" d="M1460,780 C1240,740 1130,610 950,660 C810,700 740,810 610,770" fill="none" stroke="#2d4a22" stroke-width="5" stroke-linecap="round" />
+      <path class="thorn-branch-path" d="M-20,820 C160,760 250,620 420,650 C540,670 600,740 710,710" fill="none" stroke="#1f3617" stroke-width="4" stroke-linecap="round" />
+      <path class="thorn-branch-path" d="M1460,90 C1270,150 1180,290 1010,260 C890,240 830,170 720,200" fill="none" stroke="#1f3617" stroke-width="4" stroke-linecap="round" />
+
+      <!-- Espinhos afiados ao longo dos galhos -->
+      <g class="thorn-flower-bloom" fill="#6b1426">
+        <polygon points="180,142 194,122 202,146" />
+        <polygon points="330,226 344,248 352,222" />
+        <polygon points="470,220 486,198 492,224" />
+        <polygon points="1240,740 1226,762 1218,736" />
+        <polygon points="1080,645 1066,622 1058,648" />
+        <polygon points="950,660 936,682 928,656" />
+        <polygon points="240,665 256,645 262,670" />
+        <polygon points="1190,235 1174,255 1168,230" />
+      </g>
+
+      <!-- Flores de Coroa-de-Espinhos (Euphorbia milii) brotando -->
+      <g class="thorn-flower-bloom" filter="url(#crimsonGlow)">
+        <!-- Flor 1 -->
+        <g transform="translate(290, 215)">
+          <circle cx="-6" cy="0" r="7" fill="#e11d48" />
+          <circle cx="6" cy="0" r="7" fill="#be123c" />
+          <circle cx="0" cy="-6" r="7" fill="#f43f5e" />
+          <circle cx="0" cy="6" r="7" fill="#9f1239" />
+          <circle cx="0" cy="0" r="3" fill="#fde047" />
+        </g>
+        <!-- Flor 2 -->
+        <g transform="translate(470, 220)">
+          <circle cx="-7" cy="0" r="8" fill="#f43f5e" />
+          <circle cx="7" cy="0" r="8" fill="#e11d48" />
+          <circle cx="0" cy="-7" r="8" fill="#be123c" />
+          <circle cx="0" cy="7" r="8" fill="#9f1239" />
+          <circle cx="0" cy="0" r="3.5" fill="#fef08a" />
+        </g>
+        <!-- Flor 3 -->
+        <g transform="translate(1130, 650)">
+          <circle cx="-7" cy="0" r="8" fill="#e11d48" />
+          <circle cx="7" cy="0" r="8" fill="#f43f5e" />
+          <circle cx="0" cy="-7" r="8" fill="#9f1239" />
+          <circle cx="0" cy="7" r="8" fill="#be123c" />
+          <circle cx="0" cy="0" r="3.5" fill="#fde047" />
+        </g>
+        <!-- Flor 4 -->
+        <g transform="translate(950, 660)">
+          <circle cx="-6" cy="0" r="7" fill="#f43f5e" />
+          <circle cx="6" cy="0" r="7" fill="#be123c" />
+          <circle cx="0" cy="-6" r="7" fill="#e11d48" />
+          <circle cx="0" cy="6" r="7" fill="#881337" />
+          <circle cx="0" cy="0" r="3" fill="#fef08a" />
+        </g>
+        <!-- Flor 5 -->
+        <g transform="translate(1010, 260)">
+          <circle cx="-6" cy="0" r="7" fill="#e11d48" />
+          <circle cx="6" cy="0" r="7" fill="#f43f5e" />
+          <circle cx="0" cy="-6" r="7" fill="#be123c" />
+          <circle cx="0" cy="6" r="7" fill="#9f1239" />
+          <circle cx="0" cy="0" r="3" fill="#fde047" />
+        </g>
+        <!-- Flor 6 -->
+        <g transform="translate(420, 650)">
+          <circle cx="-6" cy="0" r="7" fill="#f43f5e" />
+          <circle cx="6" cy="0" r="7" fill="#be123c" />
+          <circle cx="0" cy="-6" r="7" fill="#e11d48" />
+          <circle cx="0" cy="6" r="7" fill="#881337" />
+          <circle cx="0" cy="0" r="3" fill="#fef08a" />
+        </g>
+      </g>
+    </svg>
+
+    <!-- Centro da Cena: Olho Chartreuse com Pupila Vertical + Falas da Entidade -->
+    <div class="relative z-20 w-full h-full flex flex-col items-center justify-center px-6 text-center">
+      
+      <!-- Olho Estilizado Chartreuse -->
+      <div class="demon-eye-wrapper mb-8">
+        <svg class="w-44 h-24 sm:w-56 sm:h-28 demon-eye-glow" viewBox="0 0 240 120">
+          <defs>
+            <radialGradient id="chartreuseIris" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ecfccb" />
+              <stop offset="45%" stop-color="#bef264" />
+              <stop offset="85%" stop-color="#65a30d" />
+              <stop offset="100%" stop-color="#1a2e05" />
+            </radialGradient>
+            <clipPath id="eyeAlmondClip">
+              <path d="M12,60 Q120,-12 228,60 Q120,132 12,60 Z" />
+            </clipPath>
+          </defs>
+
+          <!-- Contorno externo da pálpebra com cílios/espinhos -->
+          <path d="M8,60 Q120,-16 232,60 Q120,136 8,60 Z" fill="#090305" stroke="#be123c" stroke-width="2.5" />
+          
+          <g clip-path="url(#eyeAlmondClip)">
+            <!-- Esclera escura sombreada -->
+            <rect x="0" y="0" width="240" height="120" fill="#120609" />
+            <!-- Íris Chartreuse -->
+            <circle cx="120" cy="60" r="40" fill="url(#chartreuseIris)" />
+            <!-- Anel interno da íris -->
+            <circle cx="120" cy="60" r="34" fill="none" stroke="#365314" stroke-width="1.5" stroke-dasharray="4 3" />
+            <!-- Pupila Vertical Predatória -->
+            <ellipse cx="120" cy="60" rx="5.5" ry="33" fill="#050203" />
+            <!-- Reflexo de luz -->
+            <circle cx="107" cy="46" r="4.5" fill="#ffffff" opacity="0.85" />
+            <circle cx="131" cy="70" r="2" fill="#ecfccb" opacity="0.6" />
+          </g>
+        </svg>
+      </div>
+
+      <!-- Diálogo da Entidade assumindo o controle -->
+      <div class="max-w-xl space-y-3 min-h-[110px]">
+        <p id="demon-voice-line1" class="font-serif-literary text-xl sm:text-2xl italic text-rose-200/95 tracking-wide"></p>
+        <p id="demon-voice-line2" class="font-display text-sm sm:text-base font-bold uppercase tracking-[0.2em] text-lime-300/90 pt-1"></p>
+      </div>
+
+      <!-- Botão discreto para pular a cena -->
+      <button id="skip-awakening-btn" type="button"
+        class="mt-10 px-4 py-1.5 rounded-full border border-rose-500/30 bg-black/50 text-[11px] uppercase tracking-widest text-rose-300/65 hover:text-rose-200 hover:border-rose-400/70 transition cursor-pointer">
+        Pular despertar ⏭
+      </button>
+    </div>
+  </div>
+
+  <!-- Pulso Carmesim de Revelação Final -->
+  <div id="crimson-flash" aria-hidden="true"></div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. TELA DE PRÓLOGO INTERATIVO (OPÇÃO 2: REGISTRO CLÍNICO & O APAGÃO)  -->
+  <!-- ===================================================================== -->
+  <section id="prologue-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-[#060d0a]/95 backdrop-blur-md transition-all duration-1000">
+    <div class="parchment-box w-full max-w-2xl rounded-2xl p-6 sm:p-10 text-left">
+      
+      <!-- Cabeçalho do Prontuário -->
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-amber-200/20 pb-4 mb-6">
+        <div>
+          <span class="text-xs uppercase tracking-[0.25em] text-amber-400/80 block mb-1">Arquivo Confidencial • Floresta</span>
+          <h1 class="font-display text-lg sm:text-xl font-bold tracking-wider text-amber-100">
+            REGISTRO #042 — CLÍNICA DA FLORESTA
+          </h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <!-- Botão de Som Sintetizado (Web Audio API) -->
+          <button id="toggle-audio-btn" type="button" title="Ativar/Desativar Som Ambiente"
+            class="px-3 py-1.5 rounded-lg border border-amber-200/25 text-xs text-amber-200/80 hover:bg-amber-200/10 flex items-center gap-1.5">
+            <span id="audio-icon">🔇</span>
+            <span class="hidden sm:inline" id="audio-label">Som: Off</span>
+          </button>
+
+          <!-- Botão Pular Digitação -->
+          <button id="skip-typing-btn" type="button"
+            class="px-3 py-1.5 rounded-lg border border-amber-200/25 text-xs text-amber-200/80 hover:bg-amber-200/10">
+            Pular texto ⏭
+          </button>
+        </div>
+      </div>
+
+      <!-- Corpo do Texto com Efeito Máquina de Escrever -->
+      <div class="space-y-4 font-serif-literary text-lg sm:text-xl leading-relaxed text-emerald-50/90 min-h-[245px]">
+        <p id="prologue-p1" class="typing-cursor"></p>
+        <p id="prologue-p2" class="text-emerald-100/85"></p>
+        
+        <!-- Nota Adicional (Apagão / Coroa-de-Espinhos) com Fade-in Suave -->
+        <div id="prologue-note-box" class="hidden smooth-reveal mt-5 pt-4 border-t border-rose-900/50 bg-rose-950/20 rounded-xl p-4">
+          <div class="flex items-center gap-2 text-xs uppercase tracking-widest text-rose-400 font-sans font-semibold mb-2">
+            <span>⚠ Nota Adicional (Caligrafia Trêmula — 05:14 AM)</span>
+          </div>
+          <p id="prologue-p3" class="text-rose-100/90 italic text-base sm:text-lg min-h-[4.5rem]"></p>
+          <p id="redact-hint" class="smooth-reveal text-xs font-sans text-rose-300/70 mt-2">
+            * Dica: Passe o mouse ou toque no trecho borrado acima para decifrar a anotação.
+          </p>
+        </div>
+      </div>
+
+      <!-- Rodapé do Prólogo: Botão para Entrar no Site -->
+      <div id="prologue-footer" class="smooth-reveal mt-8 pt-4 border-t border-amber-200/15 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <span class="text-xs text-emerald-300/60 italic">
+          Assinado: Seiji — Elite Médico
+        </span>
+
+        <button id="enter-dossier-btn" type="button"
+          class="w-full sm:w-auto px-7 py-3 rounded-xl font-display text-sm font-bold tracking-widest uppercase
+                 bg-gradient-to-r from-emerald-900 via-teal-800 to-emerald-900 text-amber-100
+                 border border-amber-400/50 shadow-lg shadow-emerald-950/80
+                 hover:brightness-110 hover:scale-[1.02] active:scale-[0.99] transition-all cursor-pointer">
+          Abrir Dossiê de Seiji ➔
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <!-- CAMADA DE TRANSIÇÃO: PORTAS SHŌJI DO HERBÁRIO & SELO DE COROA-DE-ESPINHOS -->
+  <!-- ===================================================================== -->
+  <div id="shoji-transition" class="fixed inset-0 z-[60] hidden pointer-events-none overflow-hidden" aria-hidden="true">
+    <!-- Porta Esquerda -->
+    <div id="shoji-left" class="shoji-door absolute top-0 bottom-0 left-0 w-1/2 flex items-center justify-end pr-4 sm:pr-8">
+      <div class="shoji-lattice-panel relative h-[86%] w-[86%] rounded-l-xl flex flex-col justify-between p-4 pointer-events-none">
+        <div class="w-full h-16 border-b-2 border-amber-300/35 flex items-center justify-center">
+          <span class="font-display text-[10px] tracking-[0.4em] text-amber-200/45 uppercase">Herbário</span>
+        </div>
+        <!-- Puxador embutido tradicional (Hikite) -->
+        <div class="self-end w-5 h-16 rounded-full border-2 border-amber-300/55 bg-[#091410] shadow-inner flex items-center justify-center">
+          <div class="w-1.5 h-10 rounded-full bg-amber-300/30"></div>
+        </div>
+        <div class="w-full h-20 border-t-2 border-amber-300/35 bg-black/25 rounded-b-lg"></div>
+      </div>
+    </div>
+
+    <!-- Porta Direita -->
+    <div id="shoji-right" class="shoji-door absolute top-0 bottom-0 right-0 w-1/2 flex items-center justify-start pl-4 sm:pl-8">
+      <div class="shoji-lattice-panel relative h-[86%] w-[86%] rounded-r-xl flex flex-col justify-between p-4 pointer-events-none">
+        <div class="w-full h-16 border-b-2 border-amber-300/35 flex items-center justify-center">
+          <span class="font-display text-[10px] tracking-[0.4em] text-amber-200/45 uppercase">Clínica</span>
+        </div>
+        <!-- Puxador embutido tradicional (Hikite) -->
+        <div class="self-start w-5 h-16 rounded-full border-2 border-amber-300/55 bg-[#091410] shadow-inner flex items-center justify-center">
+          <div class="w-1.5 h-10 rounded-full bg-amber-300/30"></div>
+        </div>
+        <div class="w-full h-20 border-t-2 border-amber-300/35 bg-black/25 rounded-b-lg"></div>
+      </div>
+    </div>
+
+    <!-- Selo Central (Pilão, Folhas & Coroa-de-Espinhos) -->
+    <div id="seal-wrapper" class="absolute inset-0 flex items-center justify-center">
+      <div id="seal-burst-anchor" class="relative flex items-center justify-center">
+        <div class="apothecary-seal relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center">
+          <!-- Metade Esquerda do Selo -->
+          <svg class="seal-half-left absolute inset-0 w-full h-full drop-shadow-[0_0_22px_rgba(200,169,110,0.65)]" viewBox="0 0 160 160">
+            <defs>
+              <clipPath id="clip-left-half">
+                <rect x="0" y="0" width="80" height="160" />
+              </clipPath>
+            </defs>
+            <g clip-path="url(#clip-left-half)">
+              <circle cx="80" cy="80" r="72" fill="#0d1f18" stroke="#c8a96e" stroke-width="3" />
+              <circle cx="80" cy="80" r="60" fill="none" stroke="#388e6c" stroke-width="1.5" stroke-dasharray="5 4" />
+              <!-- Espinhos e Pilão Estilizado -->
+              <path d="M52,85 Q52,115 80,115 Q108,115 108,85 Z" fill="#c8a96e" fill-opacity="0.25" stroke="#e6cfa3" stroke-width="2" />
+              <line x1="65" y1="85" x2="96" y2="48" stroke="#e6cfa3" stroke-width="4" stroke-linecap="round" />
+              <polygon points="18,80 28,74 28,86" fill="#c8a96e" />
+              <polygon points="36,36 46,38 40,46" fill="#c92a46" />
+              <polygon points="36,124 46,122 40,114" fill="#c92a46" />
+            </g>
+          </svg>
+
+          <!-- Metade Direita do Selo -->
+          <svg class="seal-half-right absolute inset-0 w-full h-full drop-shadow-[0_0_22px_rgba(200,169,110,0.65)]" viewBox="0 0 160 160">
+            <defs>
+              <clipPath id="clip-right-half">
+                <rect x="80" y="0" width="80" height="160" />
+              </clipPath>
+            </defs>
+            <g clip-path="url(#clip-right-half)">
+              <circle cx="80" cy="80" r="72" fill="#0d1f18" stroke="#c8a96e" stroke-width="3" />
+              <circle cx="80" cy="80" r="60" fill="none" stroke="#388e6c" stroke-width="1.5" stroke-dasharray="5 4" />
+              <path d="M52,85 Q52,115 80,115 Q108,115 108,85 Z" fill="#c8a96e" fill-opacity="0.25" stroke="#e6cfa3" stroke-width="2" />
+              <line x1="65" y1="85" x2="96" y2="48" stroke="#e6cfa3" stroke-width="4" stroke-linecap="round" />
+              <polygon points="142,80 132,74 132,86" fill="#c8a96e" />
+              <polygon points="124,36 114,38 120,46" fill="#c92a46" />
+              <polygon points="124,124 114,122 120,114" fill="#c92a46" />
+            </g>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. CONTEÚDO PRINCIPAL: DOSSIÊ COMPLETO DO PERSONAGEM SEIJI            -->
+  <!-- ===================================================================== -->
+  <main id="main-dossier" class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 opacity-0 transition-opacity duration-500">
+
+    <!-- Barra Superior de Utilidades (Upload de Artes & Botão de Controle do Modo) -->
+    <div class="cascade-item flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-center gap-2 text-xs uppercase tracking-[0.2em]" style="color: var(--gold);">
+        <span id="status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="mode-indicator-text">Registro Clínico Ativo • Estado Estável</span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Botão de Alternar Modo (Só aparece depois que o segredo da Espécie é descoberto!) -->
+        <button id="toggle-demon-btn" type="button"
+          class="hidden px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border transition shadow-md cursor-pointer"
+          style="background: rgba(158, 27, 50, 0.25); border-color: #c92a46; color: #ff9eb0;">
+          🥀 Selar Demônio (Modo Normal)
+        </button>
+      </div>
+    </div>
+
+    <!-- CARTÃO DE CABEÇALHO: BANNER PANORÂMICO + AVATAR + IDENTIDADE -->
+    <header class="cascade-item clinic-card rounded-2xl overflow-hidden mb-6">
+      <!-- Banner Widescreen -->
+      <div class="banner-container group">
+        <img id="hero-banner-img" src="" alt="Banner de Seiji" class="banner-img banner-zoom-enter" />
+        
+        <!-- Gradiente de leitura sobre o banner -->
+        <div class="absolute inset-0 bg-gradient-to-t from-[#09120f] via-transparent to-black/30 pointer-events-none" id="banner-gradient"></div>
+        
+        <!-- Badge de Cargo no Canto Superior Direito do Banner -->
+        <div class="absolute top-3 right-3 sm:top-4 sm:right-4 px-3.5 py-1.5 rounded-full backdrop-blur-md border text-xs font-display font-bold tracking-widest uppercase"
+             style="background: rgba(10, 20, 16, 0.78); border-color: var(--border-strong); color: var(--gold-light);">
+          ✦ Elite Médico
+        </div>
+
+        <!-- Legenda atmosférica no canto inferior direito -->
+        <div id="banner-caption" class="hidden sm:block absolute bottom-3 right-4 text-xs italic font-serif-literary text-amber-100/80 bg-black/45 px-3 py-1 rounded-full backdrop-blur-sm">
+          "Não toque nos frascos da esquerda se quiser manter seus dedos."
+        </div>
+      </div>
+
+      <!-- Área de Perfil Abaixo do Banner -->
+      <div class="px-5 sm:px-8 pb-6 pt-0 relative">
+        <div class="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6 -mt-12 sm:-mt-16 mb-6">
+          <!-- Avatar / Icon Recortado com Espinhos Reativos -->
+          <div id="hero-avatar-wrapper" class="avatar-wrapper relative shrink-0 w-fit" title="Clique para observar Seiji...">
+            <!-- Espinhos SVG que brotam ao irritar a Entidade -->
+            <svg class="avatar-thorns-svg" viewBox="0 0 160 160" aria-hidden="true">
+              <circle cx="80" cy="80" r="72" fill="none" stroke="#9f1239" stroke-width="3.5" stroke-dasharray="14 6" />
+              <polygon points="80,2 74,16 86,16" fill="#e11d48" />
+              <polygon points="80,158 74,144 86,144" fill="#e11d48" />
+              <polygon points="2,80 16,74 16,86" fill="#e11d48" />
+              <polygon points="158,80 144,74 144,86" fill="#e11d48" />
+              <polygon points="24,24 38,30 30,38" fill="#bef264" />
+              <polygon points="136,24 122,30 130,38" fill="#bef264" />
+              <polygon points="24,136 38,130 30,122" fill="#bef264" />
+              <polygon points="136,136 122,130 130,122" fill="#bef264" />
+            </svg>
+            <div id="hero-avatar-ring" class="avatar-ring">
+              <img id="hero-avatar-img" src="" alt="Icon de Seiji" class="avatar-img" />
+            </div>
+          </div>
+
+          <!-- Nome & Título -->
+          <div class="flex-1 pt-1">
+            <div class="flex flex-wrap items-center gap-3">
+              <h1 id="character-name" class="font-display text-3xl sm:text-4xl font-extrabold tracking-wide" style="color: var(--gold-light);">
+                SEIJI
+              </h1>
+              <span id="demon-badge" class="hidden px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest bg-rose-950 text-rose-300 border border-rose-600/60">
+                Despertar: Coroa-de-Espinhos
+              </span>
+            </div>
+            <p id="character-subtitle" class="font-serif-literary text-lg sm:text-xl italic mt-0.5" style="color: var(--text-muted);">
+              Médico-Chefe & Psicólogo da Floresta — O Curandeiro de Mão Venenosa
+            </p>
+          </div>
+        </div>
+
+        <!-- Grid de Informações Básicas (Com o Segredo na Espécie!) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t" style="border-color: var(--border-accent);">
+          
+          <!-- Espécie (Gatilho Secreto de 3 Cliques) -->
+          <div class="col-span-2 sm:col-span-1 p-3 rounded-xl bg-black/25 border border-white/5">
+            <span class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">
+              Espécie <span id="species-hint-dot" class="text-rose-400/70 text-[10px]" title="Há algo oculto aqui...">✦</span>
+            </span>
+            <div id="species-trigger" class="secret-species-trigger font-semibold text-sm" style="color: var(--gold-light);" title="Clique para inspecionar linhagem...">
+              <span id="species-text">Ookamimi</span>
+            </div>
+            <p id="species-feedback" class="text-[10px] text-rose-400 mt-1 hidden"></p>
+          </div>
+
+          <!-- Cargo / Natureza -->
+          <div class="p-3 rounded-xl bg-black/25 border border-white/5">
+            <span id="role-label" class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Cargo</span>
+            <span id="role-value" class="font-semibold text-sm">Elite Médico</span>
+          </div>
+
+          <!-- Idade Aparente -->
+          <div class="p-3 rounded-xl bg-black/25 border border-white/5">
+            <span id="age-label" class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Idade Aparente</span>
+            <span id="age-value" class="font-semibold text-sm">~29 – 31 anos</span>
+          </div>
+
+          <!-- Altura -->
+          <div class="p-3 rounded-xl bg-black/25 border border-white/5">
+            <span class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Altura</span>
+            <span class="font-semibold text-sm">1,77 m</span>
+          </div>
+
+          <!-- Aniversário -->
+          <div class="p-3 rounded-xl bg-black/25 border border-white/5">
+            <span id="bday-label" class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Aniversário</span>
+            <span id="bday-value" class="font-semibold text-sm">20 / 01</span>
+          </div>
+
+          <!-- Afinidade -->
+          <div class="p-3 rounded-xl bg-black/25 border border-white/5">
+            <span class="text-[11px] uppercase tracking-wider block mb-1" style="color: var(--text-muted);">Afinidade</span>
+            <span id="affinity-text" class="font-semibold text-sm">Flora & Toxinas</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- NAVEGAÇÃO POR ABAS -->
+    <nav class="cascade-item flex overflow-x-auto no-scrollbar gap-2 mb-6 pb-1" aria-label="Seções do Dossiê">
+      <button type="button" data-tab="overview" class="tab-btn active shrink-0 px-4 py-2.5 rounded-xl border border-transparent text-xs sm:text-sm font-semibold tracking-wide cursor-pointer">
+        <span id="tab-label-overview">🌿 Visão Geral & Psicologia</span>
+      </button>
+      <button type="button" data-tab="grimoire" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl border border-transparent text-xs sm:text-sm font-semibold tracking-wide cursor-pointer">
+        <span id="tab-label-grimoire">📜 Grimório de Habilidades</span>
+      </button>
+      <button type="button" data-tab="quotes" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl border border-transparent text-xs sm:text-sm font-semibold tracking-wide cursor-pointer">
+        <span id="tab-label-quotes">💬 Citações & Registros</span>
+      </button>
+      <button type="button" data-tab="relations" class="tab-btn shrink-0 px-4 py-2.5 rounded-xl border border-transparent text-xs sm:text-sm font-semibold tracking-wide cursor-pointer">
+        <span id="tab-label-relations">🐺 Relações</span>
+      </button>
+    </nav>
+
+    <!-- =================================================================== -->
+    <!-- ABA 1: VISÃO GERAL & PSICOLOGIA (CONTEÚDO DINÂMICO POR IDENTIDADE)  -->
+    <!-- =================================================================== -->
+    <section id="tab-overview" class="cascade-item tab-panel space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Personalidade & Papel na Floresta -->
+        <div class="lg:col-span-2 clinic-card rounded-2xl p-6 space-y-4">
+          <h2 id="overview-heading" class="font-display text-xl font-bold flex items-center gap-2" style="color: var(--gold-light);">
+            <span>🩺</span> Perfil Clínico & Personalidade
+          </h2>
+          
+          <p id="overview-p1" class="text-sm sm:text-base leading-relaxed" style="color: var(--text-main);"></p>
+
+          <p id="overview-p2" class="text-sm sm:text-base leading-relaxed" style="color: var(--text-main);"></p>
+
+          <!-- Bloco Dinâmico: Explicação da Mão Esquerda -->
+          <div class="p-4 rounded-xl border mt-4" style="background: rgba(0,0,0,0.28); border-color: var(--border-accent);">
+            <h3 id="left-hand-title" class="font-display text-sm font-bold uppercase tracking-wider mb-1.5" style="color: var(--gold);"></h3>
+            <p id="left-hand-desc" class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-muted);"></p>
+          </div>
+        </div>
+
+        <!-- Coluna Lateral: Gostos, Desgostos & Traços -->
+        <div class="space-y-6">
+          <div class="clinic-card rounded-2xl p-6">
+            <h3 id="likes-heading" class="font-display text-base font-bold uppercase tracking-wider mb-3" style="color: var(--gold-light);">
+              ✓ Gostos & Hábitos
+            </h3>
+            <ul id="likes-list" class="space-y-2 text-xs sm:text-sm" style="color: var(--text-main);"></ul>
+          </div>
+
+          <div class="clinic-card rounded-2xl p-6">
+            <h3 id="dislikes-heading" class="font-display text-base font-bold uppercase tracking-wider mb-3 text-rose-400">
+              ✕ Desgostos
+            </h3>
+            <ul id="dislikes-list" class="space-y-2 text-xs sm:text-sm" style="color: var(--text-main);"></ul>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ABA 2: GRIMÓRIO DE HABILIDADES (MUDA COMPLETAMENTE NO MODO OCULTO)  -->
+    <!-- =================================================================== -->
+    <section id="tab-grimoire" class="tab-panel hidden space-y-6">
+      <div id="grimoire-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Preenchido dinamicamente conforme o Modo (Seiji vs. Entidade) -->
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ABA 3: CITAÇÕES & REGISTROS (REESCRITO PELA ENTIDADE NO MODO OCULTO)-->
+    <!-- =================================================================== -->
+    <section id="tab-quotes" class="tab-panel hidden space-y-5">
+      <div id="quotes-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Preenchido dinamicamente conforme o Modo (Seiji vs. Entidade) -->
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- ABA 4: RELAÇÕES (REESCRITO PELA ENTIDADE NO MODO OCULTO)            -->
+    <!-- =================================================================== -->
+    <section id="tab-relations" class="tab-panel hidden space-y-6">
+      <div class="clinic-card rounded-2xl p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 id="relations-heading" class="font-display text-xl font-bold" style="color: var(--gold-light);">
+              Vínculos na Floresta
+            </h2>
+            <p id="relations-subtitle" class="text-xs sm:text-sm" style="color: var(--text-muted);">
+              Como Seiji interage com os habitantes e pacientes do universo Kemonomimi.
+            </p>
+          </div>
+        </div>
+
+        <div id="relations-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Preenchido dinamicamente conforme o Modo (Seiji vs. Entidade) -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- JAVASCRIPT: PRÓLOGO, ÁUDIO SINTETIZADO, PARTÍCULAS & SEGREDO          -->
+  <!-- ===================================================================== -->
+  <script>
+    // -----------------------------------------------------------------------
+    // 1. IMAGENS INTEGRADAS DO PERSONAGEM (seiji_normal.jpg & seiji_demonio.jpg)
+    // Basta manter os dois arquivos na mesma pasta do HTML ao publicar o site.
+    // -----------------------------------------------------------------------
+    const fallbackNormalArt = "data:image/svg+xml;utf8," + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520">
+        <defs>
+          <linearGradient id="bgN" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0d231b"/>
+            <stop offset="50%" stop-color="#173b2e"/>
+            <stop offset="100%" stop-color="#091712"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="520" fill="url(#bgN)"/>
+        <text x="600" y="245" text-anchor="middle" fill="#e6cfa3" font-family="Georgia, serif" font-size="26" letter-spacing="5">SEIJI — CLÍNICA DA FLORESTA</text>
+        <text x="600" y="282" text-anchor="middle" fill="#98aba2" font-family="sans-serif" font-size="14">Coloque o arquivo "seiji_normal.jpg" na mesma pasta deste HTML</text>
+      </svg>
+    `);
+
+    const fallbackDemonArt = "data:image/svg+xml;utf8," + encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520">
+        <defs>
+          <linearGradient id="bgD" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#120408"/>
+            <stop offset="50%" stop-color="#2b0912"/>
+            <stop offset="100%" stop-color="#080204"/>
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="520" fill="url(#bgD)"/>
+        <text x="600" y="245" text-anchor="middle" fill="#ff8fa3" font-family="Georgia, serif" font-size="26" letter-spacing="5">COROA-DE-ESPINHOS — DESPERTAR</text>
+        <text x="600" y="282" text-anchor="middle" fill="#d4a3ac" font-family="sans-serif" font-size="14">Coloque o arquivo "seiji_demonio.jpg" na mesma pasta deste HTML</text>
+      </svg>
+    `);
+
+    const normalArtSrc = "seiji_normal.jpg";
+    const demonArtSrc = "seiji_demonio.jpg";
+    let isDemonMode = false;
+    let secretUnlocked = false;
+    let speciesClickCount = 0;
+
+    // -----------------------------------------------------------------------
+    // BANCO DE DADOS DUAL: SEIJI (MODO NORMAL) VS. A ENTIDADE (MODO OCULTO)
+    // -----------------------------------------------------------------------
+    const dossierContent = {
+      seiji: {
+        name: 'SEIJI',
+        subtitle: 'Médico-Chefe & Psicólogo da Floresta — O Curandeiro de Mão Venenosa',
+        bannerCaption: '"Não toque nos frascos da esquerda se quiser manter seus dedos."',
+        roleLabel: 'Cargo',
+        roleValue: 'Elite Médico',
+        ageLabel: 'Idade Aparente',
+        ageValue: '~29 – 31 anos',
+        bdayLabel: 'Aniversário',
+        bdayValue: '20 / 01',
+        affinity: 'Flora & Toxinas',
+        tabs: {
+          overview: '🌿 Visão Geral & Psicologia',
+          grimoire: '📜 Grimório de Habilidades',
+          quotes: '💬 Citações & Registros',
+          relations: '🐺 Relações'
+        },
+        overview: {
+          heading: '<span>🩺</span> Perfil Clínico & Personalidade',
+          p1: 'Como <strong>Elite Médico</strong> e psicólogo da Floresta, Seiji é o pilar silencioso que mantém tanto os corpos quanto as mentes de sua comunidade intactos. Com aparência madura (~29 a 31 anos) e postura serena de Ookamimi, ele esconde uma preocupação genuína por todos sob uma fachada nitidamente <strong>tsundere</strong>: reclama da imprudência dos feridos, suspira fundo ao ouvir desabafos repetitivos, mas nunca recusa um paciente — madrugando no herbário se necessário para preparar o antídoto ou o chá exato para cada caso.',
+          p2: 'Acostumado a lidar com os traumas mais profundos e o pior lado da natureza humana e kemonomimi, Seiji possui uma mente blindada. O que ele <strong>não sabe</strong> é que habita dentro de si uma entidade demoníaca ancestral ligada à <em>Coroa-de-Espinhos</em>. Em dias raríssimos — geralmente após levar o próprio corpo ao limite absoluto para salvar alguém — ele perde a consciência, e o demônio assume o controle sem deixar memórias ao despertar.',
+          handTitle: 'A Mão Esquerda Venenosa (Visão do Seiji)',
+          handDesc: 'Totalmente verde, escamosa e coberta por pequenos espinhos tóxicos irreversíveis. Para Seiji, não há mistério algum nisso: na natureza, toda flora possui sua contraparte venenosa. Ele trata a condição com pragmatismo médico, usando ataduras ou luvas durante exames delicados e extraindo a própria toxina para sintetizar anestésicos e antídotos.',
+          likesHeading: '✓ Gostos & Hábitos',
+          likes: [
+            'Chás amargos de ervas recém-colhidas',
+            'Silêncio absoluto no consultório após o pôr do sol',
+            'Pacientes que seguem as prescrições sem reclamar',
+            'Catalogar espécies raras da floresta'
+          ],
+          dislikesHeading: '✕ Desgostos',
+          dislikes: [
+            'Guerreiros que reabrem pontos por teimosia',
+            'Barulho desnecessário perto dos leitos',
+            'Desperdício de ingredientes medicinais',
+            'Acordar sem memórias com a garganta arranhada'
+          ]
+        },
+        skills: [
+          {
+            icon: '🌱',
+            tag: 'Ramo I • Vitalidade',
+            tagColor: 'text-emerald-400',
+            title: 'Botânica Medicinal & Terapia',
+            desc: 'Capacidade de germinar e acelerar o crescimento de ervas curativas instantaneamente, além de leitura psicológica profunda para estabilizar crises mentais.',
+            items: [
+              { name: 'Sutura de Raízes:', text: 'Fibras vegetais vivas fecham hemorragias e regeneram tecidos sem deixar cicatrizes graves.' },
+              { name: 'Incenso da Clareza:', text: 'Pólen calmante liberado por flores criadas na hora para induzir sono reparador e aliviar traumas.' },
+              { name: 'Diagnóstico Sensorial:', text: 'Pelo olfato aguçado de Ookamimi, detecta alterações hormonais, febres e toxinas ocultas.' }
+            ]
+          },
+          {
+            icon: '🧪',
+            tag: 'Ramo II • Peçonha Natural',
+            tagColor: 'text-teal-300',
+            title: 'Toxinas da Mão Esquerda',
+            desc: 'Manifestação permanente do lado letal da flora em seu braço esquerdo. Seiji controla a potência do veneno com precisão cirúrgica.',
+            items: [
+              { name: 'Espinhos Paralisantes:', text: 'Pequenos projéteis orgânicos que imobilizam músculos sem causar danos permanentes.' },
+              { name: 'Transmutação de Antídoto:', text: 'Seu sangue neutraliza quase qualquer veneno botânico conhecido na floresta.' },
+              { name: 'Seiva Corrosiva:', text: 'Em combate defensivo, os espinhos secretam toxina necrosante ao contato direto.' }
+            ]
+          },
+          {
+            locked: true,
+            icon: '🥀',
+            tag: 'Ramo III • Anomalia Oculta',
+            tagColor: 'text-rose-400',
+            title: 'Coroa-de-Espinhos (Selado)',
+            desc: 'Registro bloqueado pelo próprio organismo.',
+            items: []
+          }
+        ],
+        quotes: [
+          {
+            tag: 'No Consultório • Modo Cotidiano',
+            text: '"Eu disse para você ficar em repouso por três dias, não três horas. Sente-se logo antes que eu mesmo amarre suas pernas com raízes até os pontos cicatrizarem."',
+            sub: '— Seiji, preparando uma compressa quente logo após reclamar do paciente.'
+          },
+          {
+            tag: 'Sessão de Aconselhamento',
+            text: '"Cicatrizes na pele fecham com pomada; as da cabeça apodrecem se você fingir que não existem. Fale de uma vez. Não estou cobrando por hora."',
+            sub: '— Durante um atendimento noturno na clínica.'
+          },
+          {
+            tag: 'Sobre a Mão Esquerda',
+            text: '"Qualquer botânico sabe que a mesma raiz que baixa a febre pode parar um coração na dose errada. Minha mão é só a prova disso."',
+            sub: '— Explicando por que sempre mantém a mão esquerda enfaixada perto de crianças.'
+          },
+          {
+            tag: 'Registro Fragmentado • [Selo Ativo]',
+            text: '"Estranho... não me lembro de ter fechado a janela ontem à noite. E por que há terra e pétalas vermelhas debaixo das minhas unhas?"',
+            sub: '— Anotação pessoal de Seiji após um raro apagão.',
+            muted: true
+          }
+        ],
+        relations: {
+          heading: 'Vínculos na Floresta',
+          subtitle: 'Como Seiji interage com os habitantes e pacientes do universo Kemonomimi.',
+          cards: [
+            {
+              name: 'Patrulheiros & Guerreiros',
+              badge: 'Pacientes Frequentes',
+              badgeClass: 'bg-emerald-950 text-emerald-300 border-emerald-700/40',
+              desc: 'Temem o sermão do Elite Médico quase tanto quanto os ferimentos de batalha. Mesmo reclamando da falta de juízo deles, Seiji conhece o histórico médico e emocional de cada um de cor.'
+            },
+            {
+              name: 'A Entidade Interior',
+              badge: 'Desconhecida por Seiji',
+              badgeClass: 'bg-rose-950 text-rose-300 border-rose-700/40',
+              desc: 'Para Seiji, seus apagões são apenas exaustão extrema. Ele não faz ideia de que algo antigo observa o mundo através de seus olhos quando ele cai inconsciente.'
+            }
+          ]
+        }
+      },
+
+      entity: {
+        name: 'O JARDINEIRO DA PODA',
+        subtitle: 'Entidade Parasita Protetora — A Consciência Oculta sob a Coroa-de-Espinhos',
+        bannerCaption: '"Ele se machuca para salvar ervas daninhas... Eu apenas faço a poda."',
+        roleLabel: 'Natureza',
+        roleValue: 'Parasita Ancestral',
+        ageLabel: 'Existência',
+        ageValue: 'Anterior ao Selo',
+        bdayLabel: 'Despertar',
+        bdayValue: 'Exaustão Vital',
+        affinity: 'Coroa-de-Espinhos & Sangue',
+        tabs: {
+          overview: '🥀 Consciência da Entidade',
+          grimoire: '🩸 Arsênico & Espinhos',
+          quotes: '👁 Sussurros na Escuridão',
+          relations: '🕸 Ervas Daninhas & Hospedeiro'
+        },
+        overview: {
+          heading: '<span>👁</span> Perspectiva da Entidade (Controle Assumido)',
+          p1: 'Eu não sou médico, nem tenho paciência para ouvir o choro patético dos feridos desta floresta. Quando o pequeno Ookamimi gasta toda a própria energia vital remendando estranhos e desaba inconsciente, <strong>eu assumo as rédeas</strong> para impedir que este corpo precioso morra por pura teimosia.',
+          p2: 'O mundo lá fora não passa de um jardim mal cuidado sufocado por ervas daninhas. Enquanto Seiji dorme no fundo da própria mente sem memórias, eu caminho em silêncio, elimino qualquer ameaça que ousou fazê-lo sangrar e devolvo o controle antes que ele acorde e descubra o que realmente habita sob sua pele.',
+          handTitle: 'A Garra Mutada (Verdade Oculta)',
+          handDesc: 'O que Seiji chama ingenuamente de "biologia venenosa" é apenas a fenda por onde minha essência vaza para o plano físico. Quando desperto, os espinhos da mão esquerda crescem como lâminas negras e caules floridos de coroa-de-espinhos rasgam sua garganta para empalar qualquer intruso.',
+          likesHeading: '✓ Agrados da Entidade',
+          likes: [
+            'O silêncio profundo enquanto o hospedeiro repousa',
+            'O aroma metálico da seiva carmesim recém-derramada',
+            'Podar ameaças antes que Seiji precise levantar um dedo',
+            'A escuridão noturna onde a íris chartreuse enxerga tudo'
+          ],
+          dislikesHeading: '✕ Abominações',
+          dislikes: [
+            'Parasitas ingratos que esgotam a cura do meu hospedeiro',
+            'Ervas amargas e sedativos que tentam me adormecer',
+            'Luz solar excessiva que fere os olhos recém-abertos',
+            'Curiosos que cutucam o que não devem'
+          ]
+        },
+        skills: [
+          {
+            icon: '🥀',
+            tag: 'Domínio I • Manifestação Física',
+            tagColor: 'text-rose-400',
+            title: 'Coroa-de-Espinhos (Garganta & Pele)',
+            desc: 'Caules lenhosos, rígidos e cobertos de espinhos venenosos e flores carmesins que irrompem violentamente da garganta e das articulações.',
+            items: [
+              { name: 'Chicote da Garganta:', text: 'Projeta caules espinhosos de alta velocidade pela boca para perfurar e imobilizar alvos à média distância.' },
+              { name: 'Muralha de Sarça:', text: 'Entrelaça espinhos densos ao redor do corpo inconsciente, criando uma barreira impenetrável.' },
+              { name: 'Esporos de Letargia:', text: 'As pétalas vermelhas liberam um pólen que induz sono profundo em testemunhas antes do despertar de Seiji.' }
+            ]
+          },
+          {
+            icon: '☠️',
+            tag: 'Domínio II • Veneno Absoluto',
+            tagColor: 'text-lime-400',
+            title: 'Toxina de Poda',
+            desc: 'Diferente das doses controladas do médico, a seiva liberada pela Entidade foi feita exclusivamente para cessar funções vitais.',
+            items: [
+              { name: 'Necrose Instantânea:', text: 'Qualquer arranhão da garra mutada injeta seiva ácida que apodrece tecidos e armas orgânicas.' },
+              { name: 'Drenagem de Vitalidade:', text: 'Os espinhos cravados absorvem energia vital do alvo para restaurar o corpo exausto do hospedeiro.' },
+              { name: 'Sangue Cáustico:', text: 'O próprio sangue de Seiji torna-se venenoso ao contato externo durante a possessão.' }
+            ]
+          },
+          {
+            icon: '👁',
+            tag: 'Domínio III • Simbiose',
+            tagColor: 'text-amber-300',
+            title: 'Preservação do Hospedeiro',
+            desc: 'Instinto absoluto de autopreservação dedicado a manter Seiji vivo — mesmo contra a vontade dele.',
+            items: [
+              { name: 'Olhar Chartreuse:', text: 'A íris esquerda brilha em verde-amarelado, enxergando fluxos vitais, intenções hostis e pontos fracos no escuro.' },
+              { name: 'Regeneração Forçada:', text: 'Costura ossos e órgãos internos de Seiji com raízes negras enquanto ele permanece desacordado.' },
+              { name: 'Amnésia Protetora:', text: 'Apaga cada segundo da possessão ao recuar, deixando apenas o gosto de ferro na boca do médico.' }
+            ]
+          }
+        ],
+        quotes: [
+          {
+            tag: 'Ao Assumir o Controle',
+            text: '"Durma, pequeno médico. Você gastou sangue demais curando quem não merece. Deixe que os meus espinhos cuidem do resto antes que você acorde."',
+            sub: '— Sussurrado no herbário vazio às 03:40 da manhã.'
+          },
+          {
+            tag: 'Diante de uma Ameaça',
+            text: '"Ele jura salvar cada vida que cruza esta floresta... Que sorte a dele que eu nunca fiz esse juramento."',
+            sub: '— Antes de silenciar um invasor que tentou atacar a clínica.'
+          },
+          {
+            tag: 'Sobre o Corpo do Hospedeiro',
+            text: '"Olhe para estas mãos... cheias de calos e cicatrizes por causa de estranhos. Se você não aprender a se poupar, eu mesmo terei que podar o mundo ao seu redor."',
+            sub: '— Observando as ataduras manchadas de seiva.'
+          },
+          {
+            tag: 'Aviso ao Visitante',
+            text: '"Você já olhou fundo demais por trás do selo. Feche este arquivo antes que eu decida que você também é uma erva daninha."',
+            sub: '— Mensagem gravada diretamente no registro corrompido.'
+          }
+        ],
+        relations: {
+          heading: 'Classificação do Jardim',
+          subtitle: 'Como a Entidade enxerga o hospedeiro e aqueles que o cercam.',
+          cards: [
+            {
+              name: 'Seiji ("O Hospedeiro")',
+              badge: 'Proteção Absoluta',
+              badgeClass: 'bg-rose-950 text-rose-300 border-rose-600/50',
+              desc: 'Ingênuo, teimoso e precioso demais. A Entidade não deseja possuir o corpo para sempre — apenas garante que o médico sobreviva à própria bondade.'
+            },
+            {
+              name: 'Habitantes da Floresta',
+              badge: 'Ervas Daninhas Toleradas',
+              badgeClass: 'bg-lime-950/70 text-lime-300 border-lime-600/40',
+              desc: 'Poupados apenas porque Seiji ficaria triste se morressem. Contudo, qualquer um que ferir o médico diretamente entra imediatamente na lista de poda.'
+            }
+          ]
+        }
+      }
+    };
+
+    // -----------------------------------------------------------------------
+    // 2. SINTETIZADOR DE ÁUDIO OPCIONAL (WEB AUDIO API - SEM ARQUIVOS EXTERNOS)
+    // -----------------------------------------------------------------------
+    let audioCtx = null;
+    let audioEnabled = false;
+
+    function playSoftTick(freq = 520, duration = 0.03, vol = 0.02) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq + Math.random() * 80, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // Ignora bloqueios de autoplay se houver
+      }
+    }
+
+    function playSealBreakSound() {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(48, audioCtx.currentTime + 0.7);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.75);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.75);
+      } catch (e) {}
+    }
+
+    // Batimento cardíaco desacelerando durante o desmaio do Seiji
+    function playHeartbeat(rate = 1, volume = 0.09) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+
+        const thump = (offset, freq, dur, vol) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + offset);
+          osc.frequency.exponentialRampToValueAtTime(28, now + offset + dur);
+          gain.gain.setValueAtTime(vol, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + dur);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + dur + 0.02);
+        };
+
+        thump(0, 68, 0.16, volume);
+        thump(0.22 * rate, 54, 0.22, volume * 0.75);
+      } catch (e) {}
+    }
+
+    // -----------------------------------------------------------------------
+    // 2.5 ANIMAÇÃO "GERMINAÇÃO CARMESIM" (LETRA POR LETRA ORGÂNICO DA ENTIDADE)
+    // -----------------------------------------------------------------------
+    const activeSproutTimers = new WeakMap();
+
+    function sproutText(element, text, charDelay = 28) {
+      if (!element) return Promise.resolve();
+
+      // Cancela qualquer animação anterior no mesmo elemento
+      const prevTimer = activeSproutTimers.get(element);
+      if (prevTimer) clearInterval(prevTimer);
+
+      element.innerHTML = '';
+      if (!text) return Promise.resolve();
+
+      return new Promise((resolve) => {
+        let index = 0;
+        const timer = setInterval(() => {
+          if (index >= text.length) {
+            clearInterval(timer);
+            activeSproutTimers.delete(element);
+            resolve();
+            return;
+          }
+
+          const ch = text.charAt(index);
+          const span = document.createElement('span');
+          span.className = 'sprout-char';
+          span.textContent = ch === ' ' ? '\u00A0' : ch;
+          element.appendChild(span);
+
+          if (index % 4 === 0 && ch !== ' ') {
+            playSoftTick(290, 0.03, 0.014);
+          }
+
+          index++;
+        }, charDelay);
+
+        activeSproutTimers.set(element, timer);
+      });
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. PRÓLOGO INTERATIVO (MÁQUINA DE ESCREVER + TEXTO RASURADO)
+    // -----------------------------------------------------------------------
+    const textP1 = "Todos os feridos da patrulha da fronteira foram estabilizados. As ervas cicatrizantes responderam bem, e as sessões psicológicas da tarde foram concluídas sem incidentes.";
+    const textP2 = "A toxina da minha mão esquerda permanece controlada sob as ataduras. O estoque de antídotos está completo para o restante da semana.";
+    const textP3Part1 = "Acordei caído no chão frio do herbário ao amanhecer. Não me lembro de ter encerrado o expediente. ";
+    const textP3Redacted = "Minha garganta arde como se eu tivesse engolido espinhos, e há pétalas vermelhas de coroa-de-espinhos espalhadas perto da porta...";
+    const textP3Part2 = " Preciso preparar um chá forte antes que alguém note.";
+    const textP3FullHTML = `${textP3Part1}<span class="redacted-ink" id="redacted-span" title="Clique ou passe o mouse para ler">${textP3Redacted}</span>${textP3Part2}`;
+
+    let typingAborted = false;
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function typeParagraph(element, text, speed = 24) {
+      return new Promise((resolve) => {
+        let i = 0;
+        element.classList.add('typing-cursor');
+        const interval = setInterval(() => {
+          if (typingAborted) {
+            clearInterval(interval);
+            element.textContent = text;
+            element.classList.remove('typing-cursor');
+            resolve();
+            return;
+          }
+          element.textContent += text.charAt(i);
+          if (i % 3 === 0) playSoftTick(460, 0.025, 0.015);
+          i++;
+          if (i >= text.length) {
+            clearInterval(interval);
+            element.classList.remove('typing-cursor');
+            resolve();
+          }
+        }, speed);
+      });
+    }
+
+    function finishPrologueTypingInstantly() {
+      typingAborted = true;
+      const p1 = document.getElementById('prologue-p1');
+      const p2 = document.getElementById('prologue-p2');
+      const noteBox = document.getElementById('prologue-note-box');
+      const p3 = document.getElementById('prologue-p3');
+      const hint = document.getElementById('redact-hint');
+      const footer = document.getElementById('prologue-footer');
+
+      p1.classList.remove('typing-cursor');
+      p1.textContent = textP1;
+      p2.classList.remove('typing-cursor');
+      p2.textContent = textP2;
+
+      noteBox.classList.remove('hidden');
+      requestAnimationFrame(() => noteBox.classList.add('visible'));
+
+      p3.classList.remove('typing-cursor');
+      p3.innerHTML = textP3FullHTML;
+
+      hint.classList.add('visible');
+      footer.classList.add('visible');
+      bindRedactedInteraction();
+    }
+
+    function bindRedactedInteraction() {
+      const span = document.getElementById('redacted-span');
+      if (!span) return;
+      span.addEventListener('click', () => {
+        span.classList.toggle('revealed');
+        playSoftTick(220, 0.12, 0.04);
+      });
+    }
+
+    async function runPrologueSequence() {
+      const p1 = document.getElementById('prologue-p1');
+      const p2 = document.getElementById('prologue-p2');
+      const noteBox = document.getElementById('prologue-note-box');
+      const p3 = document.getElementById('prologue-p3');
+      const hint = document.getElementById('redact-hint');
+      const footer = document.getElementById('prologue-footer');
+
+      await typeParagraph(p1, textP1, 22);
+      if (typingAborted) return;
+
+      await sleep(300);
+      if (typingAborted) return;
+
+      await typeParagraph(p2, textP2, 22);
+      if (typingAborted) return;
+
+      // Pausa dramática antes da nota adicional surgir suavemente
+      await sleep(550);
+      if (typingAborted) return;
+
+      noteBox.classList.remove('hidden');
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      noteBox.classList.add('visible');
+
+      // Aguarda o cartão da nota começar a aparecer antes de iniciar a escrita trêmula
+      await sleep(500);
+      if (typingAborted) return;
+
+      // Digita a primeira parte da nota adicional
+      await typeParagraph(p3, textP3Part1, 26);
+      if (typingAborted) return;
+
+      // Cria o trecho rasurado e digita dentro dele
+      const redactedSpan = document.createElement('span');
+      redactedSpan.className = 'redacted-ink';
+      redactedSpan.id = 'redacted-span';
+      redactedSpan.title = 'Clique ou passe o mouse para ler';
+      p3.appendChild(redactedSpan);
+
+      await typeParagraph(redactedSpan, textP3Redacted, 24);
+      if (typingAborted) return;
+
+      // Digita o final da nota após o trecho rasurado
+      const tailSpan = document.createElement('span');
+      p3.appendChild(tailSpan);
+      await typeParagraph(tailSpan, textP3Part2, 26);
+      if (typingAborted) return;
+
+      bindRedactedInteraction();
+
+      // Revela suavemente a dica e o botão de abrir o dossiê
+      await sleep(250);
+      if (typingAborted) return;
+      hint.classList.add('visible');
+
+      await sleep(300);
+      if (typingAborted) return;
+      footer.classList.add('visible');
+    }
+
+    // -----------------------------------------------------------------------
+    // 4. RENDERIZAÇÃO COMPLETA DO MODO (SEIJI VS. ENTIDADE)
+    // -----------------------------------------------------------------------
+    function renderGrimoire(data) {
+      const grid = document.getElementById('grimoire-grid');
+      grid.innerHTML = data.skills.map((skill) => {
+        if (skill.locked && !secretUnlocked) {
+          return `
+            <article class="clinic-card rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+              <div class="absolute inset-0 z-10 bg-[#08100d]/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+                <span class="text-3xl mb-2">🔒</span>
+                <h4 class="font-display text-sm font-bold uppercase tracking-widest text-amber-200/80 mb-2">
+                  Registro Selado
+                </h4>
+                <p class="text-xs text-emerald-200/60 leading-relaxed">
+                  Anomalia biológica não catalogada pelo próprio portador. Inspecione atentamente a <strong>Espécie</strong> na ficha principal para quebrar o selo.
+                </p>
+              </div>
+            </article>
+          `;
+        }
+
+        const listHTML = skill.items.map((item) => `
+          <li><strong class="${skill.tagColor}">${item.name}</strong> ${item.text}</li>
+        `).join('');
+
+        return `
+          <article class="clinic-card rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl mb-4 bg-black/40 border border-white/10">
+                ${skill.icon}
+              </div>
+              <span class="text-[11px] uppercase tracking-widest ${skill.tagColor} font-semibold">${skill.tag}</span>
+              <h3 class="font-display text-lg font-bold mt-1 mb-3" style="color: var(--gold-light);">
+                ${skill.title}
+              </h3>
+              <p class="text-xs sm:text-sm leading-relaxed mb-4" style="color: var(--text-muted);">
+                ${skill.desc}
+              </p>
+              <ul class="space-y-2.5 text-xs border-t pt-3" style="border-color: var(--border-accent); color: var(--text-main);">
+                ${listHTML}
+              </ul>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderQuotes(data) {
+      const grid = document.getElementById('quotes-grid');
+      grid.innerHTML = data.quotes.map((q) => `
+        <div class="clinic-card rounded-2xl p-6 ${q.muted ? 'border-dashed' : ''}">
+          <span class="text-[11px] uppercase tracking-widest font-semibold" style="color: ${isDemonMode ? '#fb7185' : 'var(--gold)'};">
+            ${q.tag}
+          </span>
+          <blockquote class="font-serif-literary text-xl italic mt-3 mb-3 leading-relaxed ${q.muted ? 'opacity-65' : ''}">
+            ${q.text}
+          </blockquote>
+          <p class="text-xs" style="color: var(--text-muted);">
+            ${q.sub}
+          </p>
+        </div>
+      `).join('');
+    }
+
+    function renderRelations(data) {
+      document.getElementById('relations-heading').textContent = data.relations.heading;
+      document.getElementById('relations-subtitle').textContent = data.relations.subtitle;
+
+      const grid = document.getElementById('relations-grid');
+      grid.innerHTML = data.relations.cards.map((card) => `
+        <div class="p-4 rounded-xl bg-black/25 border border-white/10">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-display font-bold text-base" style="color: var(--gold-light);">${card.name}</span>
+            <span class="text-[11px] px-2.5 py-0.5 rounded-full border ${card.badgeClass}">
+              ${card.badge}
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm leading-relaxed" style="color: var(--text-muted);">
+            ${card.desc}
+          </p>
+        </div>
+      `).join('');
+    }
+
+    function applyModeVisuals(useSproutAnimation = false) {
+      const body = document.body;
+      const data = isDemonMode ? dossierContent.entity : dossierContent.seiji;
+
+      const bannerImg = document.getElementById('hero-banner-img');
+      const avatarImg = document.getElementById('hero-avatar-img');
+      const bannerGradient = document.getElementById('banner-gradient');
+      const statusDot = document.getElementById('status-dot');
+      const modeText = document.getElementById('mode-indicator-text');
+      const toggleBtn = document.getElementById('toggle-demon-btn');
+      const demonBadge = document.getElementById('demon-badge');
+      const charName = document.getElementById('character-name');
+      const subtitle = document.getElementById('character-subtitle');
+      const bannerCaption = document.getElementById('banner-caption');
+      const speciesText = document.getElementById('species-text');
+      const affinityText = document.getElementById('affinity-text');
+
+      // Campos de metadados que mudam de perspectiva
+      document.getElementById('role-label').textContent = data.roleLabel;
+      document.getElementById('role-value').textContent = data.roleValue;
+      document.getElementById('age-label').textContent = data.ageLabel;
+      document.getElementById('age-value').textContent = data.ageValue;
+      document.getElementById('bday-label').textContent = data.bdayLabel;
+      document.getElementById('bday-value').textContent = data.bdayValue;
+      affinityText.textContent = data.affinity;
+
+      // Rótulos das abas
+      document.getElementById('tab-label-overview').textContent = data.tabs.overview;
+      document.getElementById('tab-label-grimoire').textContent = data.tabs.grimoire;
+      document.getElementById('tab-label-quotes').textContent = data.tabs.quotes;
+      document.getElementById('tab-label-relations').textContent = data.tabs.relations;
+
+      if (isDemonMode) {
+        body.classList.add('demon-mode');
+        bannerImg.onerror = () => { bannerImg.onerror = null; bannerImg.src = fallbackDemonArt; };
+        avatarImg.onerror = () => { avatarImg.onerror = null; avatarImg.src = fallbackDemonArt; };
+        bannerImg.src = demonArtSrc;
+        avatarImg.src = demonArtSrc;
+        bannerGradient.style.background = 'linear-gradient(to top, #0a0406 5%, transparent 65%, rgba(0,0,0,0.5) 100%)';
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping';
+        modeText.textContent = 'CONSCIÊNCIA SUPRIMIDA • ENTIDADE NO CONTROLE (COROA-DE-ESPINHOS)';
+        toggleBtn.textContent = '🌿 Devolver Controle ao Seiji';
+        demonBadge.classList.remove('hidden');
+        speciesText.innerHTML = 'Entidade <span class="text-rose-400">// Hospedeiro: Ookamimi</span>';
+      } else {
+        body.classList.remove('demon-mode');
+        bannerImg.onerror = () => { bannerImg.onerror = null; bannerImg.src = fallbackNormalArt; };
+        avatarImg.onerror = () => { avatarImg.onerror = null; avatarImg.src = fallbackNormalArt; };
+        bannerImg.src = normalArtSrc;
+        avatarImg.src = normalArtSrc;
+        bannerGradient.style.background = 'linear-gradient(to top, #09120f 5%, transparent 65%, rgba(0,0,0,0.35) 100%)';
+        statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse';
+        modeText.textContent = 'Registro Clínico Ativo • Estado Estável';
+        toggleBtn.textContent = '🥀 Despertar Entidade (Modo Oculto)';
+        demonBadge.classList.add('hidden');
+        speciesText.textContent = secretUnlocked ? 'Ookamimi [Selo Instável]' : 'Ookamimi';
+      }
+
+      // Título, subtítulo e legenda do banner (com Germinação Carmesim ao entrar no Modo Oculto)
+      if (useSproutAnimation && isDemonMode) {
+        sproutText(charName, data.name, 38);
+        sproutText(subtitle, data.subtitle, 16);
+        sproutText(bannerCaption, data.bannerCaption, 18);
+      } else {
+        charName.textContent = data.name;
+        subtitle.textContent = data.subtitle;
+        bannerCaption.textContent = data.bannerCaption;
+      }
+
+      // Aba 1: Visão Geral
+      document.getElementById('overview-heading').innerHTML = data.overview.heading;
+      document.getElementById('overview-p1').innerHTML = data.overview.p1;
+      document.getElementById('overview-p2').innerHTML = data.overview.p2;
+      document.getElementById('left-hand-title').textContent = data.overview.handTitle;
+      document.getElementById('left-hand-desc').textContent = data.overview.handDesc;
+      document.getElementById('likes-heading').textContent = data.overview.likesHeading;
+      document.getElementById('dislikes-heading').textContent = data.overview.dislikesHeading;
+
+      const bulletColor = isDemonMode ? 'text-lime-400' : 'text-amber-300';
+      document.getElementById('likes-list').innerHTML = data.overview.likes
+        .map((item) => `<li class="flex items-start gap-2"><span class="${bulletColor}">•</span> ${item}</li>`)
+        .join('');
+
+      document.getElementById('dislikes-list').innerHTML = data.overview.dislikes
+        .map((item) => `<li class="flex items-start gap-2"><span class="text-rose-400">•</span> ${item}</li>`)
+        .join('');
+
+      // Abas 2, 3 e 4
+      renderGrimoire(data);
+      renderQuotes(data);
+      renderRelations(data);
+    }
+
+    // -----------------------------------------------------------------------
+    // 5. PARTÍCULAS ATMOSFÉRICAS (PÓLEN DOURADO / PÉTALAS CARMESINS)
+    // -----------------------------------------------------------------------
+    function initParticles() {
+      const canvas = document.getElementById('ambient-canvas');
+      const ctx = canvas.getContext('2d');
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const particles = Array.from({ length: 38 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 2.6 + 1,
+        vx: (Math.random() - 0.5) * 0.45,
+        vy: Math.random() * 0.55 + 0.2,
+        alpha: Math.random() * 0.5 + 0.2
+      }));
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        for (const p of particles) {
+          p.x += p.vx + Math.sin(p.y * 0.01) * 0.2;
+          p.y += isDemonMode ? p.vy * 1.4 : -p.vy * 0.6; // Sobe como pólen no normal, cai como pétalas no demônio
+
+          if (p.y < -10) p.y = height + 10;
+          if (p.y > height + 10) p.y = -10;
+          if (p.x < -10) p.x = width + 10;
+          if (p.x > width + 10) p.x = -10;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = isDemonMode
+            ? `rgba(217, 65, 93, ${p.alpha})`
+            : `rgba(200, 169, 110, ${p.alpha})`;
+          ctx.fill();
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // -----------------------------------------------------------------------
+    // 6. EVENTOS & INICIALIZAÇÃO
+    // -----------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      applyModeVisuals();
+      initParticles();
+      runPrologueSequence();
+
+      // Controle de Áudio
+      const toggleAudioBtn = document.getElementById('toggle-audio-btn');
+      toggleAudioBtn.addEventListener('click', () => {
+        audioEnabled = !audioEnabled;
+        document.getElementById('audio-icon').textContent = audioEnabled ? '🔊' : '🔇';
+        document.getElementById('audio-label').textContent = audioEnabled ? 'Som: On' : 'Som: Off';
+        if (audioEnabled) playSoftTick(660, 0.08, 0.03);
+      });
+
+      // Pular animação do prólogo
+      document.getElementById('skip-typing-btn').addEventListener('click', finishPrologueTypingInstantly);
+
+      // Função de transição das Portas Shōji & Selo do Herbário
+      function spawnSealSparks() {
+        const anchor = document.getElementById('seal-burst-anchor');
+        if (!anchor) return;
+        for (let i = 0; i < 22; i++) {
+          const spark = document.createElement('span');
+          spark.className = 'seal-spark';
+          const angle = (Math.PI * 2 * i) / 22 + (Math.random() - 0.5) * 0.25;
+          const dist = 70 + Math.random() * 95;
+          spark.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+          spark.style.setProperty('--ty', `${Math.sin(angle) * dist}px`);
+          anchor.appendChild(spark);
+          setTimeout(() => spark.remove(), 1000);
+        }
+      }
+
+      async function openDossierWithShojiAnimation() {
+        const prologueScreen = document.getElementById('prologue-screen');
+        const shojiTransition = document.getElementById('shoji-transition');
+        const mainDossier = document.getElementById('main-dossier');
+        const cascadeItems = document.querySelectorAll('.cascade-item');
+
+        // 1. Exibe a camada das portas e desliza fechando sobre o prólogo
+        shojiTransition.classList.remove('hidden');
+        playSoftTick(360, 0.2, 0.04);
+        await sleep(60);
+        shojiTransition.classList.add('doors-closed');
+
+        await sleep(1150);
+        // Oculta a tela do prólogo por trás das portas fechadas
+        prologueScreen.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => prologueScreen.classList.add('hidden'), 500);
+
+        // 2. Selo do Herbário surge girando e trava as portas no centro
+        shojiTransition.classList.add('seal-active');
+        playSoftTick(620, 0.16, 0.045);
+
+        await sleep(1100);
+
+        // 3. Selo se parte ao meio com faíscas douradas e pausa dramática
+        shojiTransition.classList.add('seal-broken');
+        spawnSealSparks();
+        playSoftTick(840, 0.22, 0.05);
+
+        await sleep(650);
+
+        // 4. Portas Shōji deslizam abrindo e revelam o dossiê
+        shojiTransition.classList.remove('doors-closed');
+        mainDossier.classList.remove('opacity-0');
+
+        // 5. Entrada em cascata dos cartões do dossiê
+        cascadeItems.forEach((item, index) => {
+          setTimeout(() => {
+            item.classList.add('cascade-visible');
+          }, index * 180);
+        });
+
+        await sleep(1250);
+        shojiTransition.classList.add('hidden');
+        shojiTransition.classList.remove('seal-active', 'seal-broken');
+      }
+
+      // Entrar no Dossiê Principal com Animação das Portas Shōji & Selo
+      let isEnteringDossier = false;
+      document.getElementById('enter-dossier-btn').addEventListener('click', () => {
+        if (isEnteringDossier) return;
+        isEnteringDossier = true;
+        openDossierWithShojiAnimation();
+      });
+
+      // Gatilho Secreto na Espécie (3 cliques)
+      const speciesTrigger = document.getElementById('species-trigger');
+      const speciesFeedback = document.getElementById('species-feedback');
+      let awakeningInProgress = false;
+      let awakeningAborted = false;
+
+      async function playDemonAwakeningSequence() {
+        if (awakeningInProgress) return;
+        awakeningInProgress = true;
+        awakeningAborted = false;
+
+        const overlay = document.getElementById('awakening-overlay');
+        const line1 = document.getElementById('demon-voice-line1');
+        const line2 = document.getElementById('demon-voice-line2');
+
+        line1.textContent = '';
+        line2.textContent = '';
+
+        // 1) Tontura e perda de consciência gradual (pálpebras fechando + batimento desacelerando)
+        document.body.classList.add('fainting-effect');
+        playHeartbeat(1.0, 0.1);
+
+        await sleep(650);
+        if (awakeningAborted) return;
+
+        overlay.classList.add('active');
+        await sleep(500);
+        if (awakeningAborted) return;
+
+        overlay.classList.add('eyelids-closed');
+        playHeartbeat(1.35, 0.075);
+
+        await sleep(1500);
+        if (awakeningAborted) return;
+        playHeartbeat(1.75, 0.045);
+
+        await sleep(1200);
+        if (awakeningAborted) return;
+
+        // 2) Na escuridão, as pálpebras internas reabrem revelando o plano da entidade
+        overlay.classList.add('eyelids-reopen');
+        overlay.classList.add('grow-thorns');
+        playSealBreakSound();
+
+        await sleep(1150);
+        if (awakeningAborted) return;
+
+        // Flores de Coroa-de-Espinhos brotam e o Olho Chartreuse se abre no centro
+        overlay.classList.add('bloom-flowers');
+        overlay.classList.add('open-demon-eye');
+
+        await sleep(1350);
+        if (awakeningAborted) return;
+
+        // 3) Fala da Entidade assumindo o controle com "Germinação Carmesim" (letra por letra orgânico)
+        const quote1 = '"Ele se esgotou de novo... cuidando de quem não merece."';
+        const quote2 = 'Descanse, médico. Eu cuido da poda agora.';
+
+        await sproutText(line1, quote1, 34);
+        if (awakeningAborted) return;
+
+        await sleep(750);
+        if (awakeningAborted) return;
+
+        await sproutText(line2, quote2, 36);
+        if (awakeningAborted) return;
+
+        await sleep(1650);
+        if (awakeningAborted) return;
+
+        // 4) Pulso carmesim dissipa a escuridão e revela o site no Modo Demônio
+        finishAwakeningTransition();
+      }
+
+      function finishAwakeningTransition() {
+        const overlay = document.getElementById('awakening-overlay');
+        const flash = document.getElementById('crimson-flash');
+
+        flash.classList.add('flash-in');
+        playSealBreakSound();
+
+        setTimeout(() => {
+          secretUnlocked = true;
+          isDemonMode = true;
+          speciesFeedback.textContent = 'Selo quebrado: Entidade despertada.';
+          document.getElementById('toggle-demon-btn').classList.remove('hidden');
+          applyModeVisuals(true);
+
+          // Limpa estados do overlay
+          document.body.classList.remove('fainting-effect');
+          overlay.classList.remove('active', 'eyelids-closed', 'eyelids-reopen', 'grow-thorns', 'bloom-flowers', 'open-demon-eye');
+          awakeningInProgress = false;
+
+          setTimeout(() => {
+            flash.classList.remove('flash-in');
+          }, 180);
+        }, 520);
+      }
+
+      document.getElementById('skip-awakening-btn').addEventListener('click', () => {
+        if (!awakeningInProgress) return;
+        awakeningAborted = true;
+        finishAwakeningTransition();
+      });
+
+      speciesTrigger.addEventListener('click', () => {
+        if (awakeningInProgress) return;
+
+        if (secretUnlocked) {
+          isDemonMode = !isDemonMode;
+          applyModeVisuals(isDemonMode);
+          return;
+        }
+
+        speciesClickCount++;
+        speciesFeedback.classList.remove('hidden');
+
+        if (speciesClickCount === 1) {
+          speciesTrigger.classList.add('shake-1');
+          speciesFeedback.textContent = 'Anomalia detectada na toxina... (1/3)';
+          playSoftTick(260, 0.08, 0.04);
+          setTimeout(() => speciesTrigger.classList.remove('shake-1'), 400);
+        } else if (speciesClickCount === 2) {
+          speciesTrigger.classList.add('shake-2');
+          speciesFeedback.textContent = 'O selo está rachando... Mais um toque (2/3)';
+          playSoftTick(190, 0.12, 0.05);
+          setTimeout(() => speciesTrigger.classList.remove('shake-2'), 450);
+        } else if (speciesClickCount >= 3) {
+          speciesFeedback.textContent = 'Consciência vacilando...';
+          playDemonAwakeningSequence();
+        }
+      });
+
+      // Botão Superior de Alternar Modo (após desbloqueado)
+      document.getElementById('toggle-demon-btn').addEventListener('click', () => {
+        isDemonMode = !isDemonMode;
+        playSoftTick(isDemonMode ? 180 : 520, 0.1, 0.04);
+        applyModeVisuals(isDemonMode);
+      });
+
+      // ---------------------------------------------------------------------
+      // 7. SISTEMA PROGRESSIVO DE IRRITAÇÃO AO PERTURBAR O AVATAR / BANNER
+      // ---------------------------------------------------------------------
+      let annoyanceCount = 0;
+      let annoyanceDecayTimer = null;
+      let whisperHideTimer = null;
+      let isPunishmentLocked = false;
+
+      const avatarWrapper = document.getElementById('hero-avatar-wrapper');
+      const avatarRing = document.getElementById('hero-avatar-ring');
+      const bannerContainer = document.querySelector('.banner-container');
+      const whisperToast = document.getElementById('entity-whisper-toast');
+      const whisperLabel = document.getElementById('whisper-level-label');
+      const whisperText = document.getElementById('whisper-text');
+      const annoyanceVignette = document.getElementById('annoyance-vignette');
+
+      function showEntityWhisper(levelTitle, message) {
+        clearTimeout(whisperHideTimer);
+        whisperLabel.textContent = levelTitle;
+        whisperToast.classList.add('visible');
+        sproutText(whisperText, message, 22);
+
+        whisperHideTimer = setTimeout(() => {
+          whisperToast.classList.remove('visible');
+        }, 4800);
+      }
+
+      function triggerPruningPunishment() {
+        if (isPunishmentLocked) return;
+        isPunishmentLocked = true;
+
+        const overlay = document.getElementById('pruning-punishment-overlay');
+        const pText = document.getElementById('punishment-text');
+        const pTimer = document.getElementById('punishment-timer');
+
+        overlay.classList.add('active');
+        playSealBreakSound();
+        sproutText(pText, '"Eu avisei. Fique quieto."', 32);
+
+        let secondsLeft = 4;
+        pTimer.textContent = `Aguarde ${secondsLeft}s...`;
+
+        const countdown = setInterval(() => {
+          secondsLeft--;
+          if (secondsLeft > 0) {
+            pTimer.textContent = `Aguarde ${secondsLeft}s...`;
+          } else {
+            clearInterval(countdown);
+            overlay.classList.remove('active');
+            annoyanceVignette.classList.remove('active');
+            avatarWrapper.classList.remove('annoy-lv2', 'annoy-lv3', 'annoy-lv4');
+            annoyanceCount = 0;
+            isPunishmentLocked = false;
+
+            // Se o usuário insistiu até o Nível 4 ainda no Modo Normal, a Entidade assume à força!
+            if (!isDemonMode && !awakeningInProgress) {
+              playDemonAwakeningSequence();
+            }
+          }
+        }, 1000);
+      }
+
+      function handleDisturbSeiji() {
+        if (awakeningInProgress || isPunishmentLocked) return;
+
+        annoyanceCount++;
+        clearTimeout(annoyanceDecayTimer);
+        annoyanceDecayTimer = setTimeout(() => {
+          annoyanceCount = 0;
+          avatarWrapper.classList.remove('annoy-lv2', 'annoy-lv3', 'annoy-lv4');
+          annoyanceVignette.classList.remove('active');
+        }, 9000);
+
+        // Tremor visual no avatar
+        avatarRing.classList.remove('shake-1', 'shake-2');
+        void avatarRing.offsetWidth;
+        avatarRing.classList.add(annoyanceCount >= 5 ? 'shake-2' : 'shake-1');
+
+        if (annoyanceCount === 2 || annoyanceCount === 3) {
+          // Nível 1: Aviso Sutil
+          playSoftTick(240, 0.1, 0.04);
+          showEntityWhisper(
+            'Nível I • Aviso Silencioso',
+            '"Tire as mãos. Ele precisa descansar."'
+          );
+        } else if (annoyanceCount === 5 || annoyanceCount === 6) {
+          // Nível 2: Espinhos brotando ao redor do avatar
+          avatarWrapper.classList.add('annoy-lv2');
+          playSoftTick(180, 0.14, 0.05);
+          showEntityWhisper(
+            'Nível II • Espinhos de Alerta',
+            '"Você é surdo ou apenas insolente? Não toque no meu hospedeiro."'
+          );
+        } else if (annoyanceCount === 8 || annoyanceCount === 9) {
+          // Nível 3: Névoa Tóxica & Olho Chartreuse piscando no avatar
+          avatarWrapper.classList.add('annoy-lv3');
+          annoyanceVignette.classList.add('active');
+          playHeartbeat(1.1, 0.08);
+          showEntityWhisper(
+            'Nível III • Hostilidade Crítica',
+            '"Mais um toque e eu faço espinhos brotarem da sua garganta."'
+          );
+        } else if (annoyanceCount >= 10) {
+          // Nível 4: Punição da Poda (Bloqueio Temporário)
+          avatarWrapper.classList.add('annoy-lv4');
+          whisperToast.classList.remove('visible');
+          triggerPruningPunishment();
+        }
+      }
+
+      avatarWrapper.addEventListener('click', handleDisturbSeiji);
+      bannerContainer.addEventListener('click', handleDisturbSeiji);
+
+      // Navegação entre Abas
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabPanels = document.querySelectorAll('.tab-panel');
+
+      tabBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-tab');
+          tabBtns.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          tabPanels.forEach((panel) => {
+            if (panel.id === `tab-${target}`) {
+              panel.classList.remove('hidden');
+            } else {
+              panel.classList.add('hidden');
+            }
+          });
+          playSoftTick(480, 0.03, 0.02);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
