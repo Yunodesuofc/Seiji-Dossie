@@ -1378,18 +1378,54 @@
           <!-- Balão de Resposta em Tempo Real -->
           <div id="therapy-response-card" class="rounded-2xl p-5 border transition-all"
             style="background: rgba(0, 0, 0, 0.34); border-color: var(--border-accent);">
-            <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b" style="border-color: rgba(255,255,255,0.08);">
               <span id="therapy-speaker-tag" class="text-[11px] uppercase tracking-widest font-bold" style="color: var(--gold);">
                 🩺 Seiji • Escuta Clínica
               </span>
-              <span id="therapy-mode-pill" class="text-[11px] px-2.5 py-0.5 rounded-full border"
-                style="border-color: var(--border-accent); color: var(--gold-light);">
-                Abordagem: Normal
-              </span>
+              <div class="flex items-center gap-2">
+                <span id="therapy-mode-pill" class="text-[11px] px-2.5 py-0.5 rounded-full border"
+                  style="border-color: var(--border-accent); color: var(--gold-light);">
+                  Abordagem: Normal
+                </span>
+                <button id="toggle-ai-key-panel-btn" type="button" title="Configurar IA em Tempo Real (Gemini)"
+                  class="text-[11px] px-2.5 py-0.5 rounded-full border hover:brightness-110 transition cursor-pointer"
+                  style="border-color: var(--border-accent); color: var(--text-muted);">
+                  ✨ IA: <span id="ai-status-badge">Modo Offline</span>
+                </button>
+                <button id="clear-therapy-chat-btn" type="button" title="Limpar conversa"
+                  class="text-[11px] px-2 py-0.5 rounded-full border hover:text-rose-300 transition cursor-pointer"
+                  style="border-color: rgba(255,255,255,0.1); color: var(--text-muted);">
+                  Limpar
+                </button>
+              </div>
             </div>
-            <p id="therapy-reply-text" class="font-serif-literary text-xl sm:text-2xl italic leading-relaxed" style="color: var(--text-main);">
-              "Sente-se. Não precisa ensaiar um discurso bonito aqui dentro — apenas me diga o que está pesando."
-            </p>
+
+            <!-- Painel Opcional de Chave Gratuita do Google Gemini -->
+            <div id="ai-key-panel" class="hidden mb-4 p-3.5 rounded-xl border bg-black/40 space-y-2" style="border-color: var(--border-accent);">
+              <p class="text-xs leading-relaxed" style="color: var(--text-muted);">
+                Cole uma chave gratuita do <strong>Google AI Studio (Gemini)</strong> para o Seiji inventar respostas inéditas com IA real em tempo real (sem chave, ele usa o gerador dinâmico local):
+              </p>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input id="gemini-api-key-input" type="password" placeholder="AIzaSy..."
+                  class="flex-1 px-3 py-1.5 rounded-lg bg-black/50 border text-xs focus:outline-none"
+                  style="border-color: var(--border-accent); color: var(--text-main);" />
+                <button id="save-gemini-key-btn" type="button"
+                  class="px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border cursor-pointer"
+                  style="background: rgba(56, 142, 108, 0.25); border-color: var(--border-strong); color: var(--gold-light);">
+                  Ativar IA
+                </button>
+              </div>
+            </div>
+
+            <!-- Histórico Contínuo do Chat -->
+            <div id="therapy-chat-history" class="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+              <div class="p-3.5 rounded-xl border bg-black/25" style="border-color: rgba(255,255,255,0.06);">
+                <p id="therapy-reply-text" class="font-serif-literary text-lg sm:text-xl italic leading-relaxed" style="color: var(--text-main);">
+                  "Sente-se. Não precisa ensaiar um discurso bonito aqui dentro — apenas me diga o que está pesando."
+                </p>
+              </div>
+            </div>
+
             <div id="therapy-prescription-box" class="mt-3 pt-3 border-t flex items-center gap-2 text-xs"
               style="border-color: rgba(255,255,255,0.08); color: var(--text-muted);">
               <span>🍵</span>
@@ -2425,6 +2461,270 @@
       return 'default';
     }
 
+    // Estado da Sessão de Chat Terapêutico (Memória da Conversa & Chave Gemini)
+    let sessionGeminiApiKey = '';
+    let therapyChatMessages = [];
+    let lastGeneratedReply = '';
+
+    const dynamicReplyBlocks = {
+      seiji: {
+        sweet: {
+          openings: [
+            'Percebo o peso nas suas palavras...',
+            'Respire devagar antes de continuar.',
+            'Você não precisa esconder o cansaço aqui dentro.',
+            'Sente-se um instante e solte esse fardo dos ombros.'
+          ],
+          cores: [
+            'Estar sobrecarregado não apaga o quanto você já resistiu até hoje.',
+            'Até as árvores mais antigas da floresta precisam de chuva calma e silêncio para cicatrizar.',
+            'Você passou tempo demais sendo abrigo para outros sem ter onde encostar a própria cabeça.',
+            'Sentir demais não é defeito — apenas mostra que você ainda está vivo por dentro.'
+          ],
+          prescriptions: [
+            'Infusão morna de Camomila Silvestre e Flor-de-Lua — beber sem pressa.',
+            'Chá suave de Folha-de-Jade com mel silvestre + descanso longe de cobranças.',
+            'Compressa morna e 10 minutos de silêncio absoluto no herbário.'
+          ]
+        },
+        normal: {
+          openings: [
+            'Entendo o que você está tentando dizer.',
+            'Vamos separar o que é fato do que é apenas o seu medo falando.',
+            'Ouça com atenção o que você mesmo acabou de descrever.',
+            'Isso pesa, mas precisa ser olhado com lucidez.'
+          ],
+          cores: [
+            'As pessoas mudam quando é a hora certa para elas — não quando você precisa.',
+            'Quando estamos carentes, sentimos falta até do que faz mal; cuidado para não voltar ao que te feriu.',
+            'Acolher uma emoção não significa obedecer a ela. Você pode sentir dor e ainda escolher se proteger.',
+            'Perdoar não é abrir a porta de novo; é apenas parar de beber o veneno que deixaram.'
+          ],
+          prescriptions: [
+            'Chá de Alecrim-da-Mata para clareza mental e foco no presente.',
+            'Tintura equilibrada de Erva-Jade — tomar antes de tomar qualquer decisão impulsiva.',
+            'Infusão de Hortelã-Brava para organizar os pensamentos.'
+          ]
+        },
+        slap: {
+          openings: [
+            'Vou dizer isso uma única vez, então preste atenção:',
+            'Pare de arrumar desculpas bonitas para o que está te destruindo.',
+            'Você não veio aqui para ouvir mentiras confortáveis.',
+            'Seja sincero consigo mesmo por cinco segundos:'
+          ],
+          cores: [
+            'Você continua regando uma planta morta e depois reclama das mãos sujas de barro. Solte esse vaso.',
+            'Pare de chamar de "lealdade" o medo de ficar sozinho. Ficar onde te diminuem é autoabandono.',
+            'Ninguém vai te tirar de uma jaula cuja chave está no seu próprio bolso.',
+            'Se um amigo seu falasse consigo mesmo do jeito cruel que você fala, você já o teria mandado calar a boca.'
+          ],
+          prescriptions: [
+            'Extrato puro de Raiz-Amarga — engula sem açúcar e tome uma atitude.',
+            'Dose concentrada de Amor-Próprio — corte pela raiz o que te drena.',
+            'Tônico de Coragem Bruta — agir mesmo com as mãos tremendo.'
+          ]
+        }
+      },
+      entity: {
+        sweet: {
+          openings: ['Feche os olhos...', 'Que respiração frágil...', 'Silêncio...'],
+          cores: [
+            'O mundo lá fora é barulhento demais para quem sangra tão fácil.',
+            'Descanse sob a sombra dos espinhos antes que seu corpo desabe de vez.'
+          ],
+          prescriptions: ['Silêncio absoluto na escuridão até o pulso desacelerar.']
+        },
+        normal: {
+          openings: ['Interessante...', 'Observe bem:', 'A mente mortal é previsível.'],
+          cores: [
+            'Vocês seguram brasas na mão e depois reclamam da queimadura.',
+            'Uma árvore não chora pelos galhos secos que caem no outono.'
+          ],
+          prescriptions: ['Diagnóstico da Entidade: excesso de apego, falta de lâmina.']
+        },
+        slap: {
+          openings: ['Patético.', 'Ouça bem, mortal:', 'Que perda de seiva.'],
+          cores: [
+            'Se você não arrancar pela raiz o que te mata por dentro, eu mesmo faço a poda.',
+            'Piedade por quem te destrói não é virtude — é estupidez.'
+          ],
+          prescriptions: ['Prescrição da Poda: eliminação total de parasitas emocionais.']
+        }
+      }
+    };
+
+    function pickNonRepeating(arr, avoid) {
+      if (!arr || arr.length === 0) return '';
+      if (arr.length === 1) return arr[0];
+      let chosen = arr[Math.floor(Math.random() * arr.length)];
+      let tries = 0;
+      while (chosen === avoid && tries < 6) {
+        chosen = arr[Math.floor(Math.random() * arr.length)];
+        tries++;
+      }
+      return chosen;
+    }
+
+    function generateDynamicOfflineResponse(userText, modeData) {
+      const cat = detectEmotionCategory(userText);
+      const basePool = modeData.responses[cat] || modeData.responses.default;
+      const side = isDemonMode ? dynamicReplyBlocks.entity : dynamicReplyBlocks.seiji;
+      const blocks = side[currentTherapyMode] || side.normal;
+
+      const opening = pickNonRepeating(blocks.openings, '');
+      const core = Math.random() < 0.55
+        ? basePool.text.replace(/^"|"$/g, '')
+        : pickNonRepeating(blocks.cores, '');
+      const fullText = `"${opening} ${core}"`;
+
+      const presc = Math.random() < 0.5
+        ? basePool.prescription
+        : pickNonRepeating(blocks.prescriptions, '');
+
+      if (fullText === lastGeneratedReply) {
+        const altCore = pickNonRepeating(blocks.cores, core);
+        lastGeneratedReply = `"${opening} ${altCore}"`;
+        return { text: lastGeneratedReply, prescription: presc };
+      }
+
+      lastGeneratedReply = fullText;
+      return { text: fullText, prescription: presc };
+    }
+
+    async function fetchGeminiTherapyReply(userText) {
+      const modeInstructions = isDemonMode
+        ? (currentTherapyMode === 'sweet'
+            ? 'Você é O Jardineiro da Poda (entidade demoníaca ancestral da Coroa-de-Espinhos habitando o corpo de Seiji). Fale em tom sombrio, protetor e hipnótico.'
+            : currentTherapyMode === 'slap'
+              ? 'Você é O Jardineiro da Poda (entidade demoníaca ancestral). Seja cortante, implacável e sem piedade com a fraqueza humana.'
+              : 'Você é O Jardineiro da Poda (entidade demoníaca ancestral). Analise a mente humana com frieza botânica e superioridade.')
+        : (currentTherapyMode === 'sweet'
+            ? 'Você é Seiji, Elite Médico e psicólogo Ookamimi da Floresta (~30 anos). Neste modo DOCE, abaixe sua guarda tsundere e acolha o paciente com gentileza profunda, empatia calma e metáforas botânicas suaves.'
+            : currentTherapyMode === 'slap'
+              ? 'Você é Seiji, Elite Médico e psicólogo Ookamimi da Floresta (~30 anos). Neste modo TAPA NA CARA, use sua personalidade tsundere direta e sem filtro: dê um choque de realidade duro, lúcido e honesto para tirar o paciente da autossabotagem, mas ainda querendo o bem dele.'
+              : 'Você é Seiji, Elite Médico e psicólogo Ookamimi da Floresta (~30 anos). Neste modo NORMAL, seja um psicólogo lúcido, sereno, levemente reservado/tsundere, trazendo reflexões psicológicas profundas.');
+
+      const systemPrompt = `${modeInstructions}
+Responda sempre em português do Brasil, em primeira pessoa, como em uma sessão real de consultório.
+Crie uma resposta INÉDITA e natural (2 a 4 frases) reagindo diretamente ao que o usuário escreveu.
+No final, adicione uma nova linha começando exatamente com "PRESCRIÇÃO:" seguida de uma recomendação simbólica de chá ou hábito clínico curto.`;
+
+      const recentHistory = therapyChatMessages.slice(-6).map((msg) => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.text }]
+      }));
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(sessionGeminiApiKey)}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [...recentHistory, { role: 'user', parts: [{ text: userText }] }],
+          generationConfig: { temperature: 0.95, maxOutputTokens: 280 }
+        })
+      });
+
+      if (!res.ok) throw new Error('Falha na API Gemini');
+      const data = await res.json();
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      if (!raw) throw new Error('Resposta vazia');
+
+      const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+      const prescLineIndex = lines.findIndex((l) => l.toUpperCase().startsWith('PRESCRIÇÃO:') || l.toUpperCase().startsWith('PRESCRICAO:'));
+      let prescription = 'Infusão de Erva-Jade — tomar em silêncio após a sessão.';
+      let replyText = raw;
+
+      if (prescLineIndex !== -1) {
+        prescription = lines[prescLineIndex].replace(/^PRESCRI[ÇC][ÃA]O:\s*/i, '');
+        lines.splice(prescLineIndex, 1);
+        replyText = lines.join(' ');
+      }
+
+      if (!replyText.startsWith('"')) replyText = `"${replyText}"`;
+      return { text: replyText, prescription };
+    }
+
+    function appendChatBubble(role, speakerLabel, text, animateSprout = false) {
+      const historyEl = document.getElementById('therapy-chat-history');
+      if (!historyEl) return;
+
+      const bubble = document.createElement('div');
+      if (role === 'user') {
+        bubble.className = 'p-3 rounded-xl border ml-6 sm:ml-12 text-right';
+        bubble.style.background = 'rgba(200, 169, 110, 0.08)';
+        bubble.style.borderColor = 'var(--border-accent)';
+        bubble.innerHTML = `
+          <span class="text-[10px] uppercase tracking-widest block mb-1" style="color: var(--gold);">Você</span>
+          <p class="text-xs sm:text-sm" style="color: var(--text-main);"></p>
+        `;
+        bubble.querySelector('p').textContent = text;
+      } else {
+        bubble.className = 'p-3.5 rounded-xl border mr-2 sm:mr-8 bg-black/30';
+        bubble.style.borderColor = isDemonMode ? 'rgba(225, 29, 72, 0.45)' : 'rgba(56, 142, 108, 0.35)';
+        bubble.innerHTML = `
+          <span class="text-[10px] uppercase tracking-widest font-bold block mb-1" style="color: var(--gold);">${speakerLabel}</span>
+          <p class="font-serif-literary text-lg sm:text-xl italic leading-relaxed" style="color: var(--text-main);"></p>
+        `;
+        const pEl = bubble.querySelector('p');
+        if (animateSprout && isDemonMode) {
+          sproutText(pEl, text, 14);
+        } else {
+          pEl.textContent = text;
+        }
+      }
+
+      historyEl.appendChild(bubble);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    async function handleTherapyMessageSubmit(userText) {
+      const cleanText = userText.trim();
+      if (!cleanText) return;
+
+      const source = isDemonMode ? therapyLibrary.entity : therapyLibrary.seiji;
+      const modeData = source.modes[currentTherapyMode] || source.modes.normal;
+      const prescEl = document.getElementById('therapy-prescription-text');
+      const historyEl = document.getElementById('therapy-chat-history');
+
+      appendChatBubble('user', 'Você', cleanText, false);
+      therapyChatMessages.push({ role: 'user', text: cleanText });
+
+      // Indicador de digitação no consultório
+      const typingId = `typing-${Date.now()}`;
+      const typingDiv = document.createElement('div');
+      typingDiv.id = typingId;
+      typingDiv.className = 'p-3 rounded-xl border bg-black/20 text-xs italic';
+      typingDiv.style.borderColor = 'rgba(255,255,255,0.08)';
+      typingDiv.style.color = 'var(--text-muted)';
+      typingDiv.textContent = isDemonMode
+        ? '🥀 A Entidade observa suas palavras nas sombras...'
+        : '🍵 Seiji está preparando o chá e anotando no prontuário...';
+      historyEl.appendChild(typingDiv);
+      historyEl.scrollTop = historyEl.scrollHeight;
+
+      let replyObj = null;
+      if (sessionGeminiApiKey) {
+        try {
+          replyObj = await fetchGeminiTherapyReply(cleanText);
+        } catch (err) {
+          replyObj = generateDynamicOfflineResponse(cleanText, modeData);
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, 420));
+        replyObj = generateDynamicOfflineResponse(cleanText, modeData);
+      }
+
+      const typingNode = document.getElementById(typingId);
+      if (typingNode) typingNode.remove();
+
+      therapyChatMessages.push({ role: 'model', text: replyObj.text });
+      appendChatBubble('model', modeData.speaker, replyObj.text, true);
+      prescEl.textContent = `Prescrição: ${replyObj.prescription}`;
+      playBotanicalPageChime();
+    }
+
     function renderTherapySection(animateReply = false) {
       const source = isDemonMode ? therapyLibrary.entity : therapyLibrary.seiji;
       const modeData = source.modes[currentTherapyMode] || source.modes.normal;
@@ -2467,18 +2767,12 @@
       applyStaggeredCardCascade(grid);
 
       if (animateReply) {
-        const inputVal = document.getElementById('therapy-input').value.trim();
-        const cat = detectEmotionCategory(inputVal);
-        const replyObj = modeData.responses[cat] || modeData.responses.default;
-        const replyEl = document.getElementById('therapy-reply-text');
-        const prescEl = document.getElementById('therapy-prescription-text');
-
-        if (isDemonMode) {
-          sproutText(replyEl, replyObj.text, 16);
-        } else {
-          replyEl.textContent = replyObj.text;
+        const inputEl = document.getElementById('therapy-input');
+        const inputVal = inputEl.value.trim();
+        if (inputVal) {
+          inputEl.value = '';
+          handleTherapyMessageSubmit(inputVal);
         }
-        prescEl.textContent = `Prescrição: ${replyObj.prescription}`;
       }
     }
 
@@ -2885,40 +3179,65 @@
       document.querySelectorAll('.therapy-mode-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           currentTherapyMode = btn.getAttribute('data-therapy-mode');
-          const hasInput = document.getElementById('therapy-input').value.trim().length > 0;
-          renderTherapySection(hasInput);
+          renderTherapySection(false);
           playBotanicalPageChime();
         });
       });
 
       document.querySelectorAll('.therapy-chip').forEach((chip) => {
         chip.addEventListener('click', () => {
-          const input = document.getElementById('therapy-input');
-          input.value = chip.getAttribute('data-prompt');
-          renderTherapySection(true);
+          const promptText = chip.getAttribute('data-prompt');
+          handleTherapyMessageSubmit(promptText);
           playSoftTick(580, 0.05, 0.025);
         });
       });
 
       document.getElementById('therapy-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        renderTherapySection(true);
-        playBotanicalPageChime();
+        const inputEl = document.getElementById('therapy-input');
+        const val = inputEl.value.trim();
+        if (!val) return;
+        inputEl.value = '';
+        handleTherapyMessageSubmit(val);
+      });
+
+      document.getElementById('toggle-ai-key-panel-btn').addEventListener('click', () => {
+        document.getElementById('ai-key-panel').classList.toggle('hidden');
+      });
+
+      document.getElementById('save-gemini-key-btn').addEventListener('click', () => {
+        const keyInput = document.getElementById('gemini-api-key-input').value.trim();
+        sessionGeminiApiKey = keyInput;
+        const badge = document.getElementById('ai-status-badge');
+        badge.textContent = sessionGeminiApiKey ? 'Gemini Ativo ✨' : 'Modo Offline';
+        badge.style.color = sessionGeminiApiKey ? '#34d399' : '';
+        document.getElementById('ai-key-panel').classList.add('hidden');
+        playSoftTick(720, 0.08, 0.03);
+      });
+
+      document.getElementById('clear-therapy-chat-btn').addEventListener('click', () => {
+        therapyChatMessages = [];
+        const source = isDemonMode ? therapyLibrary.entity : therapyLibrary.seiji;
+        const modeData = source.modes[currentTherapyMode] || source.modes.normal;
+        const historyEl = document.getElementById('therapy-chat-history');
+        historyEl.innerHTML = `
+          <div class="p-3.5 rounded-xl border bg-black/25" style="border-color: rgba(255,255,255,0.06);">
+            <p id="therapy-reply-text" class="font-serif-literary text-lg sm:text-xl italic leading-relaxed" style="color: var(--text-main);">
+              "Sente-se. O prontuário está limpo — pode me dizer o que pesa na sua mente agora."
+            </p>
+          </div>
+        `;
+        document.getElementById('therapy-prescription-text').textContent = `Prescrição: ${modeData.responses.default.prescription}`;
+        playSoftTick(480, 0.05, 0.02);
       });
 
       document.getElementById('random-therapy-quote-btn').addEventListener('click', () => {
         const source = isDemonMode ? therapyLibrary.entity : therapyLibrary.seiji;
         const modeData = source.modes[currentTherapyMode] || source.modes.normal;
-        const randomQuote = modeData.quotes[Math.floor(Math.random() * modeData.quotes.length)];
-        const replyEl = document.getElementById('therapy-reply-text');
-        const prescEl = document.getElementById('therapy-prescription-text');
-
-        if (isDemonMode) {
-          sproutText(replyEl, randomQuote, 16);
-        } else {
-          replyEl.textContent = randomQuote;
-        }
-        prescEl.textContent = 'Conselho sorteado diretamente do caderno de anotações da clínica.';
+        const randomQuote = pickNonRepeating(modeData.quotes, lastGeneratedReply);
+        lastGeneratedReply = randomQuote;
+        appendChatBubble('model', modeData.speaker, randomQuote, true);
+        document.getElementById('therapy-prescription-text').textContent = 'Conselho sorteado diretamente do caderno de anotações da clínica.';
         playSoftTick(640, 0.06, 0.025);
       });
 
