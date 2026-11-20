@@ -985,8 +985,8 @@
           <!-- Botão de Som Sintetizado (Web Audio API) -->
           <button id="toggle-audio-btn" type="button" title="Ativar/Desativar Som Ambiente"
             class="px-3 py-1.5 rounded-lg border border-amber-200/25 text-xs text-amber-200/80 hover:bg-amber-200/10 flex items-center gap-1.5">
-            <span id="audio-icon">🔇</span>
-            <span class="hidden sm:inline" id="audio-label">Som: Off</span>
+            <span id="audio-icon">🔊</span>
+            <span class="hidden sm:inline" id="audio-label">Som: On</span>
           </button>
 
           <!-- Botão Pular Digitação -->
@@ -1125,7 +1125,7 @@
         <button id="dossier-audio-btn" type="button" title="Ativar/Desativar Som Ambiente"
           class="px-3 py-1.5 rounded-lg text-xs font-medium border transition hover:brightness-110 cursor-pointer"
           style="background: var(--bg-card); border-color: var(--border-accent); color: var(--gold-light);">
-          <span id="dossier-audio-icon">🔇</span> <span id="dossier-audio-label">Som: Off</span>
+          <span id="dossier-audio-icon">🔊</span> <span id="dossier-audio-label">Som: On</span>
         </button>
 
         <!-- Botão de Alternar Modo (Só aparece depois que o segredo da Espécie é descoberto!) -->
@@ -1735,7 +1735,7 @@
     // 2. SISTEMA DE ÁUDIO SINTETIZADO (WEB AUDIO API) & EFEITOS DE TEXTO
     // -----------------------------------------------------------------------
     let audioCtx = null;
-    let audioEnabled = false;
+    let audioEnabled = true;
     let ambientNodes = null;
 
     function ensureAudioContext() {
@@ -1746,7 +1746,7 @@
         }
       }
       if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
+        audioCtx.resume().catch(() => {});
       }
       return audioCtx;
     }
@@ -1797,7 +1797,7 @@
       osc2.frequency.setValueAtTime(isDemonMode ? 98.0 : 220.0, ctx.currentTime);
 
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(isDemonMode ? 0.014 : 0.018, ctx.currentTime + 1.2);
+      gain.gain.exponentialRampToValueAtTime(isDemonMode ? 0.018 : 0.024, ctx.currentTime + 0.8);
 
       osc1.connect(gain);
       osc2.connect(gain);
@@ -3393,6 +3393,8 @@ No final, adicione uma nova linha começando exatamente com "PRESCRIÇÃO:" segu
 
       document.getElementById('dislikes-list').innerHTML = data.overview.dislikes
         .map((item) => `<li class="flex items-start gap-2"><span class="text-rose-400">•</span> ${item}</li>`)
+        .join('');
+
       // Abas 2, 3, 4, 5, 6 e 7
       renderGrimoire(data);
       renderQuotes(data);
@@ -3641,26 +3643,38 @@ No final, adicione uma nova linha começando exatamente com "PRESCRIÇÃO:" segu
     // 8. INICIALIZAÇÃO & EVENTOS PRINCIPAIS
     // -----------------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
+      syncAudioButtonsUI();
       applyModeVisuals();
       initParticles();
       initPulseMonitor();
       runPrologueSequence();
 
-      // Exame manual de pulso (Estetoscópio)
-      document.getElementById('check-pulse-btn').addEventListener('click', triggerManualPulseExam);
+      // Tenta iniciar o áudio imediatamente ao carregar a página
+      try {
+        ensureAudioContext();
+        updateAmbientSoundscape();
+      } catch (e) {}
 
-      // Alquimia Botânica (Destilar e Limpar Almofariz)
-      document.getElementById('brew-potion-btn').addEventListener('click', brewSelectedFormula);
-      document.getElementById('reset-alchemy-btn').addEventListener('click', () => {
-        selectedIngredients = [];
-        document.getElementById('mortar-icon').textContent = '⚗️';
-        document.getElementById('alchemy-result-tag').textContent = 'Aguardando Destilação';
-        document.getElementById('alchemy-result-title').textContent = 'Escolha duas amostras acima';
-        document.getElementById('alchemy-result-desc').textContent =
-          'Cada combinação entre ervas da floresta, toxinas da mão esquerda ou pétalas anômalas gera um composto distinto com análise clínica.';
-        renderAlchemyLab();
-        playSoftTick(460, 0.05, 0.02);
-      });
+      // Garante o desbloqueio imediato no primeiro toque/clique/tecla caso o navegador segure o autoplay
+      const unlockInitialAudio = (evt) => {
+        if (!audioEnabled) return;
+        const ctx = ensureAudioContext();
+        if (ctx && ctx.state === 'suspended') {
+          ctx.resume().then(() => {
+            if (!ambientNodes) updateAmbientSoundscape();
+          });
+        } else if (!ambientNodes) {
+          updateAmbientSoundscape();
+        }
+        if (ctx && ctx.state === 'running') {
+          window.removeEventListener('pointerdown', unlockInitialAudio, true);
+          window.removeEventListener('touchstart', unlockInitialAudio, true);
+          window.removeEventListener('keydown', unlockInitialAudio, true);
+        }
+      };
+      window.addEventListener('pointerdown', unlockInitialAudio, true);
+      window.addEventListener('touchstart', unlockInitialAudio, true);
+      window.addEventListener('keydown', unlockInitialAudio, true);
 
       // Emitir e Copiar Receita Clínica na Terapêutica
       document.getElementById('issue-prescription-btn').addEventListener('click', () => {
@@ -3732,6 +3746,15 @@ No final, adicione uma nova linha começando exatamente com "PRESCRIÇÃO:" segu
 
       // Controle de Áudio (Prólogo & Dossiê)
       const handleToggleAudio = () => {
+        const ctx = ensureAudioContext();
+        // Se o navegador ainda mantinha o áudio suspenso no primeiro clique, apenas libera sem mutar
+        if (audioEnabled && ctx && ctx.state === 'suspended') {
+          ctx.resume().then(() => {
+            updateAmbientSoundscape();
+            playSoftTick(660, 0.08, 0.03);
+          });
+          return;
+        }
         audioEnabled = !audioEnabled;
         syncAudioButtonsUI();
         updateAmbientSoundscape();
